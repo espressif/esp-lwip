@@ -41,6 +41,7 @@
 #if !NO_SYS /* don't build if not configured for use in lwipopts.h */
 
 #include "lwip/priv/tcpip_priv.h"
+#include "lwip/priv/api_msg.h"
 #include "lwip/sys.h"
 #include "lwip/memp.h"
 #include "lwip/mem.h"
