@@ -170,6 +170,11 @@ struct pbuf {
    * the stack itself, or pbuf->next pointers from a chain.
    */
   u16_t ref;
+
+#if ESP_LWIP
+  struct netif *l2_owner;
+  void *l2_buf;
+#endif
 };
 
 
