@@ -709,6 +709,31 @@ void dhcp_cleanup(struct netif *netif)
   }
 }
 
+/* Espressif add start. */
+
+/** Set callback for dhcp, reserved parameter for future use.
+ *
+ * @param netif the netif from which to remove the struct dhcp
+ * @param cb    callback for dhcp
+ */
+#ifdef ESP_DHCP
+void dhcp_set_cb(struct netif *netif, void (*cb)(struct netif*))
+#else
+void dhcp_set_cb(struct netif *netif, void (*cb)(void))
+#endif
+{
+  struct dhcp *dhcp;
+  dhcp = netif_dhcp_data(netif);
+
+  LWIP_ASSERT("netif != NULL", netif != NULL);
+
+  if (dhcp != NULL) {
+    dhcp->cb = cb;
+  }
+}
+
+/* Espressif add end. */
+
 /**
  * @ingroup dhcp4
  * Start DHCP negotiation for a network interface.
@@ -1120,6 +1145,16 @@ dhcp_bind(struct netif *netif)
 
   netif_set_addr(netif, &dhcp->offered_ip_addr, &sn_mask, &gw_addr);
   /* interface is used by routing now that an address is set */
+
+ /* Espressif add start. */
+  if (dhcp->cb != NULL) {
+#ifdef ESP_DHCP
+      dhcp->cb(netif);
+#else
+      dhcp->cb();
+#endif
+  }
+  /* Espressif add end. */
 }
 
 /**

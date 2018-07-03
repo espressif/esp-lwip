@@ -103,6 +103,14 @@ struct dhcp
   ip4_addr_t offered_si_addr;
   char boot_file_name[DHCP_BOOT_FILE_LEN];
 #endif /* LWIP_DHCP_BOOTPFILE */
+
+  /* Espressif add start. */
+#ifdef ESP_DHCP
+  void (*cb)(struct netif*); /* callback for dhcp, add a parameter to show dhcp status if needed */
+#else
+  void (*cb)(void); /* callback for dhcp, add a parameter to show dhcp status if needed */
+#endif
+  /* Espressif add end. */
 };
 
 
@@ -116,6 +124,16 @@ err_t dhcp_release(struct netif *netif);
 void dhcp_stop(struct netif *netif);
 void dhcp_inform(struct netif *netif);
 void dhcp_network_changed(struct netif *netif);
+
+/* Espressif add start. */
+/** set callback for DHCP */
+#ifdef ESP_DHCP
+void dhcp_set_cb(struct netif *netif, void (*cb)(struct netif*));
+#else
+void dhcp_set_cb(struct netif *netif, void (*cb)(void));
+#endif
+/* Espressif add end. */
+
 #if DHCP_DOES_ARP_CHECK
 void dhcp_arp_reply(struct netif *netif, const ip4_addr_t *addr);
 #endif
