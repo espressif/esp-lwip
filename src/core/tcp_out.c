@@ -1468,6 +1468,7 @@ tcp_rexmit(struct tcp_pcb *pcb)
 #endif /* TCP_OVERSIZE */
 
   if (pcb->nrtx < 0xFF) {
+    ESP_STATS_TCP_PCB(pcb);
     ++pcb->nrtx;
   }
 
