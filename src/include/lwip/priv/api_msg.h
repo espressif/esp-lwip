@@ -177,6 +177,14 @@ struct dns_api_msg {
 };
 #endif /* LWIP_DNS */
 
+#if LWIP_NETCONN_SEM_PER_THREAD
+#if ESP_THREAD_SAFE
+#define LWIP_NETCONN_THREAD_SEM_GET() sys_thread_sem_get()
+#define LWIP_NETCONN_THREAD_SEM_ALLOC() sys_thread_sem_init()
+#define LWIP_NETCONN_THREAD_SEM_FREE() sys_thread_sem_deinit()
+#endif
+#endif
+
 #if LWIP_TCP
 extern u8_t netconn_aborted;
 #endif /* LWIP_TCP */
