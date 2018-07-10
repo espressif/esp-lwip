@@ -153,6 +153,18 @@ netconn_new_with_proto_and_callback(enum netconn_type t, u8_t proto, netconn_cal
   return conn;
 }
 
+#if ESP_THREAD_SAFE
+static inline bool is_created_by_socket(struct netconn *conn)
+{
+#if LWIP_SOCKET
+  if (conn && (conn->socket >= 0)) {
+    return true;
+  }
+#endif
+  return false;
+}
+#endif
+
 /**
  * @ingroup netconn_common
  * Close a netconn 'connection' and free its resources.
@@ -192,7 +204,14 @@ netconn_delete(struct netconn *conn)
     return err;
   }
 
+#if ESP_THREAD_SAFE
+  if (is_created_by_socket(conn) == false) {
+    LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("netconn_delete - free conn\n"));
+    netconn_free(conn);
+  }
+#else
   netconn_free(conn);
+#endif
 
   return ERR_OK;
 }
@@ -571,6 +590,12 @@ netconn_recv_data(struct netconn *conn, void **new_buf)
 #endif /* LWIP_TCP && (LWIP_UDP || LWIP_RAW) */
 #if (LWIP_UDP || LWIP_RAW)
   {
+#if ESP_THREAD_SAFE
+    if (buf == NULL){
+      API_EVENT(conn, NETCONN_EVT_RCVMINUS, 0);
+      return ERR_CLSD;
+    }
+#endif
     LWIP_ASSERT("buf != NULL", buf != NULL);
     len = netbuf_len((struct netbuf*)buf);
   }

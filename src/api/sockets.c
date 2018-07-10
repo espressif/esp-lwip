@@ -214,9 +214,112 @@ struct lwip_sock {
   u16_t errevent;
   /** last error that occurred on this socket (in fact, all our errnos fit into an u8_t) */
   u8_t err;
+
+#if ESP_THREAD_SAFE
+  /* lock is used to protect state/ref field, however this lock is not a perfect lock, e.g
+   * taskA and taskB can access sock X, then taskA freed sock X, before taskB detect 
+   * this, taskC reuse sock X, then when taskB try to access sock X, problem may happen.
+   * A mitigation solution may be, when allocate a socket, alloc the least frequently used
+   * socket.
+   */
+  sys_mutex_t lock;
+
+  /* can be LWIP_SOCK_OPEN/LWIP_SOCK_CLOSING/LWIP_SOCK_CLOSED */
+  u8_t state;
+
+  /* if ref is 0, the sock need/can to be freed */
+  s8_t ref;
+
+  /* indicate how long the sock is in LWIP_SOCK_CLOSED status */
+  u8_t age;
+#endif
+ 
   /** counter of how many threads are waiting for this socket using select */
   SELWAIT_T select_waiting;
 };
+
+#if ESP_THREAD_SAFE
+
+#define LWIP_SOCK_OPEN    0
+#define LWIP_SOCK_CLOSING 1
+#define LWIP_SOCK_CLOSED  2
+
+#define LWIP_SOCK_LOCK(sock) \
+do{\
+  /*LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("l\n"));*/\
+    sys_mutex_lock(&sock->lock);\
+  /*LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("l ok\n"));*/\
+}while(0)
+
+
+#define LWIP_SOCK_UNLOCK(sock) \
+do{\
+  sys_mutex_unlock(&sock->lock);\
+  /*LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG1, ("unl\n"));*/\
+}while(0)
+
+#define LWIP_FREE_SOCK(sock) \
+do{\
+  if(sock->conn && NETCONNTYPE_GROUP(netconn_type(sock->conn)) == NETCONN_TCP){\
+    LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("LWIP_FREE_SOCK:free tcp sock\n"));\
+    free_socket(sock, 1);\
+  } else {\
+    LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("LWIP_FREE_SOCK:free non-tcp sock\n"));\
+    free_socket(sock, 0);\
+  }\
+}while(0)
+
+#define LWIP_SET_CLOSE_FLAG() \
+do{\
+  LWIP_SOCK_LOCK(__sock);\
+  LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("mark sock closing\n"));\
+  __sock->state = LWIP_SOCK_CLOSING;\
+  LWIP_SOCK_UNLOCK(__sock);\
+}while(0)
+
+#define LWIP_API_LOCK() \
+  struct lwip_sock *__sock;\
+  int __ret;\
+\
+  __sock = get_socket(s);\
+  if (!__sock) {\
+    return -1;\
+  }\
+\
+do{\
+  LWIP_SOCK_LOCK(__sock);\
+  __sock->ref ++;\
+  if (__sock->state != LWIP_SOCK_OPEN) {\
+    LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("LWIP_API_LOCK:soc is %d, return\n", __sock->state));\
+    __sock->ref --;\
+    LWIP_SOCK_UNLOCK(__sock);\
+    return -1;\
+  }\
+\
+  LWIP_SOCK_UNLOCK(__sock);\
+}while(0)
+
+#define LWIP_API_UNLOCK() \
+do{\
+  LWIP_SOCK_LOCK(__sock);\
+  __sock->ref --;\
+  if (__sock->state == LWIP_SOCK_CLOSING) {\
+    if (__sock->ref == 0){\
+      LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("LWIP_API_UNLOCK:ref 0, free __sock\n"));\
+      LWIP_FREE_SOCK(__sock);\
+      LWIP_SOCK_UNLOCK(__sock);\
+      return __ret;\
+    }\
+    LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("LWIP_API_UNLOCK: soc state is closing, return\n"));\
+    LWIP_SOCK_UNLOCK(__sock);\
+    return __ret;\
+  }\
+\
+  LWIP_SOCK_UNLOCK(__sock);\
+  return __ret;\
+}while(0)
+
+#endif
 
 #if LWIP_NETCONN_SEM_PER_THREAD
 #define SELECT_SEM_T        sys_sem_t*
@@ -283,6 +386,9 @@ static void lwip_socket_drop_registered_memberships(int s);
 
 /** The global array of available sockets */
 static struct lwip_sock sockets[NUM_SOCKETS];
+#if ESP_THREAD_SAFE
+static bool sockets_init_flag = false;
+#endif
 /** The global list of tasks waiting for select */
 static struct lwip_select_cb *select_cb_list;
 /** This counter is increased from lwip_select when the list is changed
@@ -403,6 +509,75 @@ alloc_socket(struct netconn *newconn, int accepted)
   int i;
   SYS_ARCH_DECL_PROTECT(lev);
 
+#if ESP_THREAD_SAFE
+  bool    found        = false;
+  int     oldest       = -1;
+
+  SYS_ARCH_PROTECT(lev);
+
+  if (sockets_init_flag == false){
+    sockets_init_flag = true;
+    memset(sockets, 0, sizeof(sockets));
+  }
+
+  for (i = 0; i < NUM_SOCKETS; ++i) {
+    sockets[i].age ++;
+
+    if (found == true){
+      continue;
+    }
+
+    if (!sockets[i].conn && (sockets[i].state == LWIP_SOCK_OPEN)) {
+      found  = true;
+      oldest = i;
+      continue;
+    }
+
+    if (!sockets[i].conn){
+      if (oldest == -1 || sockets[i].age > sockets[oldest].age){
+        oldest = i;
+      }
+    }
+  }
+
+  if ((oldest != -1) && !sockets[oldest].conn) {
+    found = true;
+    sockets[oldest].conn       = newconn;
+  }
+
+  SYS_ARCH_UNPROTECT(lev);
+ 
+  if (found == true) {
+    sockets[oldest].lastdata   = NULL;
+    sockets[oldest].lastoffset = 0;
+    sockets[oldest].rcvevent   = 0;
+
+    /* TCP sendbuf is empty, but the socket is not yet writable until connected
+     * (unless it has been created by accept()). */
+    sockets[oldest].sendevent  = (NETCONNTYPE_GROUP(newconn->type) == NETCONN_TCP ? (accepted != 0) : 1);
+    sockets[oldest].errevent   = 0;
+    sockets[oldest].err        = 0;
+    sockets[oldest].select_waiting = 0;
+
+    sockets[oldest].state      = LWIP_SOCK_OPEN;
+    sockets[oldest].age        = 0;
+    sockets[oldest].ref        = 0;
+    if (!sockets[oldest].lock){
+      /* one time init and never free */
+      if (sys_mutex_new(&sockets[oldest].lock) != ERR_OK){
+        LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("new sock lock fail\n"));
+        return -1;
+      }
+    }
+    LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("alloc_socket: alloc %d ok\n", oldest));
+
+    return oldest + LWIP_SOCKET_OFFSET;
+  }
+
+  LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("alloc_socket: failed\n"));
+ 
+#else
+
   /* allocate a new socket identifier */
   for (i = 0; i < NUM_SOCKETS; ++i) {
     /* Protect socket array */
@@ -424,6 +599,9 @@ alloc_socket(struct netconn *newconn, int accepted)
     }
     SYS_ARCH_UNPROTECT(lev);
   }
+
+#endif
+
   return -1;
 }
 
@@ -438,10 +616,26 @@ free_socket(struct lwip_sock *sock, int is_tcp)
 {
   void *lastdata;
 
+#if ESP_THREAD_SAFE
+  SYS_ARCH_DECL_PROTECT(lev);
+  LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("free_sockset:free socket s=%p is_tcp=%d\n", sock, is_tcp));
+#endif
+ 
   lastdata         = sock->lastdata;
   sock->lastdata   = NULL;
   sock->lastoffset = 0;
   sock->err        = 0;
+#if ESP_THREAD_SAFE
+  if (sock->conn){
+    netconn_free(sock->conn);
+  }
+
+  SYS_ARCH_PROTECT(lev);
+  sock->age        = 0;
+  sock->conn       = NULL;
+  sock->state      = LWIP_SOCK_CLOSED;
+  SYS_ARCH_UNPROTECT(lev);
+#endif
 
   /* Protect socket array */
   SYS_ARCH_SET(sock->conn, NULL);
@@ -620,6 +814,9 @@ lwip_close(int s)
 
   if (sock->conn != NULL) {
     is_tcp = NETCONNTYPE_GROUP(netconn_type(sock->conn)) == NETCONN_TCP;
+#if ESP_THREAD_SAFE
+    LWIP_DEBUGF(SOCKETS_DEBUG|ESP_THREAD_SAFE_DEBUG, ("lwip_close: is_tcp=%d\n", is_tcp));
+#endif
   } else {
     LWIP_ASSERT("sock->lastdata == NULL", sock->lastdata == NULL);
   }
@@ -635,7 +832,10 @@ lwip_close(int s)
     return -1;
   }
 
+#if !ESP_THREAD_SAFE
   free_socket(sock, is_tcp);
+#endif
+
   set_errno(0);
   return 0;
 }
@@ -2824,4 +3024,175 @@ lwip_socket_drop_registered_memberships(int s)
   }
 }
 #endif /* LWIP_IGMP */
+
+#if ESP_THREAD_SAFE
+
+int ESP_IRAM_ATTR
+lwip_sendto_r(int s, const void *data, size_t size, int flags,
+       const struct sockaddr *to, socklen_t tolen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_sendto(s, data, size, flags, to, tolen);
+  LWIP_API_UNLOCK();
+}
+ 
+int
+lwip_send_r(int s, const void *data, size_t size, int flags)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_send(s, data, size, flags);
+  LWIP_API_UNLOCK();
+}
+
+int ESP_IRAM_ATTR
+lwip_recvfrom_r(int s, void *mem, size_t len, int flags,
+              struct sockaddr *from, socklen_t *fromlen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_recvfrom(s, mem, len, flags, from, fromlen);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_recv_r(int s, void *mem, size_t len, int flags)
+{
+  return lwip_recvfrom_r(s, mem, len, flags, NULL, NULL);
+}
+
+int
+lwip_read_r(int s, void *mem, size_t len)
+{
+  return lwip_recvfrom_r(s, mem, len, 0, NULL, NULL);
+}
+
+int
+lwip_sendmsg_r(int s, const struct msghdr *msg, int flags)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_sendmsg(s, msg, flags);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_write_r(int s, const void *data, size_t size)
+{
+  return lwip_send_r(s, data, size, 0);
+}
+
+int
+lwip_writev_r(int s, const struct iovec *iov, int iovcnt)
+{
+  struct msghdr msg;
+
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
+  /* Hack: we have to cast via number to cast from 'const' pointer to non-const.
+     Blame the opengroup standard for this inconsistency. */
+  msg.msg_iov = (struct iovec *)(size_t)iov;
+  msg.msg_iovlen = iovcnt;
+  msg.msg_control = NULL;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+  return lwip_sendmsg_r(s, &msg, 0);
+}
+
+int
+lwip_connect_r(int s, const struct sockaddr *name, socklen_t namelen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_connect(s, name, namelen);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_listen_r(int s, int backlog)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_listen(s, backlog);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_bind_r(int s, const struct sockaddr *name, socklen_t namelen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_bind(s, name, namelen);
+  LWIP_API_UNLOCK();
+}
+ 
+int
+lwip_accept_r(int s, struct sockaddr *addr, socklen_t *addrlen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_accept(s, addr, addrlen);
+  LWIP_API_UNLOCK();
+}
+ 
+int
+lwip_ioctl_r(int s, long cmd, void *argp)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_ioctl(s, cmd, argp);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_fcntl_r(int s, int cmd, int val)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_fcntl(s, cmd, val);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_setsockopt_r(int s, int level, int optname, const void *optval, socklen_t optlen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_setsockopt(s, level, optname, optval, optlen);
+  LWIP_API_UNLOCK();
+}
+ 
+int
+lwip_getsockopt_r(int s, int level, int optname, void *optval, socklen_t *optlen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_getsockopt(s, level, optname, optval, optlen);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_getpeername_r(int s, struct sockaddr *name, socklen_t *namelen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_getpeername(s, name, namelen);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_getsockname_r(int s, struct sockaddr *name, socklen_t *namelen)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_getsockname(s, name, namelen);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_close_r(int s)
+{
+  LWIP_API_LOCK();
+  LWIP_SET_CLOSE_FLAG();
+  __ret = lwip_close(s);
+  LWIP_API_UNLOCK();
+}
+
+int
+lwip_shutdown_r(int s, int how)
+{
+  LWIP_API_LOCK();
+  __ret = lwip_shutdown(s, how);
+  LWIP_API_UNLOCK();
+}
+
+#endif
+
 #endif /* LWIP_SOCKET */
