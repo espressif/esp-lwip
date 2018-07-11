@@ -219,6 +219,11 @@ u8_t netif_alloc_client_data_id(void);
 #define netif_get_client_data(netif, id)       (netif)->client_data[(id)]
 #endif /* LWIP_DHCP || LWIP_AUTOIP || (LWIP_NUM_NETIF_CLIENT_DATA > 0) */
 
+#if ESP_DHCP
+/*add DHCP event processing by LiuHan*/
+typedef void (*dhcp_event_fn)(void);
+#endif
+
 /** Generic data structure used for all lwIP network interfaces.
  *  The following fields should be filled in by the initialization
  *  function for the device driver: hwaddr_len, hwaddr[], mtu, flags */
@@ -284,6 +289,12 @@ struct netif {
 #ifdef netif_get_client_data
   void* client_data[LWIP_NETIF_CLIENT_DATA_INDEX_MAX + LWIP_NUM_NETIF_CLIENT_DATA];
 #endif
+
+#if ESP_DHCP
+  struct udp_pcb *dhcps_pcb;	
+  dhcp_event_fn dhcp_event;
+#endif
+
 #if LWIP_IPV6_AUTOCONFIG
   /** is this netif enabled for IPv6 autoconfiguration */
   u8_t ip6_autoconfig_enabled;

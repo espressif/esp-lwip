@@ -59,6 +59,7 @@
 #include "lwip/memp.h"
 #include "lwip/pbuf.h"
 #include "lwip/priv/tcpip_priv.h"
+#include "lwip/priv/api_msg.h"
 #if LWIP_CHECKSUM_ON_COPY
 #include "lwip/inet_chksum.h"
 #endif
