@@ -409,10 +409,17 @@ dns_clear_servers(bool keep_fallback)
  *         server has not been configured.
  */
 #if ESP_DNS
-ip_addr_t*
+ip_addr_t
+dns_getserver(u8_t numdns)
+{
+  if (numdns < DNS_MAX_SERVERS) {
+    return dns_servers[numdns];
+  } else {
+    return *IP_ADDR_ANY;
+  }
+}
 #else
 const ip_addr_t*
-#endif
 dns_getserver(u8_t numdns)
 {
   if (numdns < DNS_MAX_SERVERS) {
@@ -421,6 +428,8 @@ dns_getserver(u8_t numdns)
     return IP_ADDR_ANY;
   }
 }
+#endif
+
 
 /**
  * The DNS resolver client timer - handle retries and timeouts and should

@@ -105,7 +105,7 @@ void             dns_init(void);
 void             dns_tmr(void);
 void             dns_setserver(u8_t numdns, const ip_addr_t *dnsserver);
 #if ESP_DNS
-ip_addr_t*       dns_getserver(u8_t numdns);
+ip_addr_t       dns_getserver(u8_t numdns);
 #else
 const ip_addr_t* dns_getserver(u8_t numdns);
 #endif
