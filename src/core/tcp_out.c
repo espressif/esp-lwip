@@ -1118,6 +1118,11 @@ tcp_output(struct tcp_pcb *pcb)
 
 #if TCP_OVERSIZE_DBGCHECK
     seg->oversize_left = 0;
+#if ESP_LWIP
+    if (seg->next == NULL) {
+      pcb->unsent_oversize = 0;
+    }
+#endif
 #endif /* TCP_OVERSIZE_DBGCHECK */
     err = tcp_output_segment(seg, pcb, netif);
     if (err != ERR_OK) {
