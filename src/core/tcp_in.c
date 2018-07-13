@@ -770,6 +770,9 @@ tcp_process(struct tcp_pcb *pcb)
   /* Do different things depending on the TCP state. */
   switch (pcb->state) {
   case SYN_SENT:
+#if ESP_LWIP
+    if (pcb->unacked) {
+#endif
     LWIP_DEBUGF(TCP_INPUT_DEBUG, ("SYN-SENT: ackno %"U32_F" pcb->snd_nxt %"U32_F" unacked %"U32_F"\n", ackno,
      pcb->snd_nxt, lwip_ntohl(pcb->unacked->tcphdr->seqno)));
     /* received SYN ACK with expected sequence number? */
@@ -823,6 +826,9 @@ tcp_process(struct tcp_pcb *pcb)
       }
       tcp_ack_now(pcb);
     }
+#if ESP_LWIP
+    }
+#endif
     /* received ACK? possibly a half-open connection */
     else if (flags & TCP_ACK) {
       /* send a RST to bring the other side in a non-synchronized state. */

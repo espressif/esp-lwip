@@ -513,6 +513,9 @@ tcp_abandon(struct tcp_pcb *pcb, int reset)
 #if TCP_QUEUE_OOSEQ
     if (pcb->ooseq != NULL) {
       tcp_segs_free(pcb->ooseq);
+#if ESP_LWIP
+      pcb->ooseq = NULL;
+#endif	
     }
 #endif /* TCP_QUEUE_OOSEQ */
     tcp_backlog_accepted(pcb);

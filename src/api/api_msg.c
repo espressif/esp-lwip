@@ -75,7 +75,16 @@
 #define WRITE_DELAYED_PARAM
 #endif /* LWIP_TCPIP_CORE_LOCKING */
 static err_t lwip_netconn_do_writemore(struct netconn *conn  WRITE_DELAYED_PARAM);
+
+#if ESP_LWIP
+#define SIG_CLOSE_PARAM  , bool sig_close
+#define SIG_CLOSE_TRUE   true
+#define SIG_CLOSE_FALSE  false
+static err_t lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM SIG_CLOSE_PARAM);
+#else
 static err_t lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM);
+#endif
+
 #endif
 
 #if LWIP_TCPIP_CORE_LOCKING
@@ -310,6 +319,9 @@ static err_t
 poll_tcp(void *arg, struct tcp_pcb *pcb)
 {
   struct netconn *conn = (struct netconn *)arg;
+#if ESP_LWIP
+  bool sig_close = false;
+#endif
 
   LWIP_UNUSED_ARG(pcb);
   LWIP_ASSERT("conn != NULL", (conn != NULL));
@@ -322,7 +334,14 @@ poll_tcp(void *arg, struct tcp_pcb *pcb)
       conn->current_msg->msg.sd.polls_left--;
     }
 #endif /* !LWIP_SO_SNDTIMEO && !LWIP_SO_LINGER */
+#if ESP_LWIP
+    /* Delay the netconn close until no one use 'conn' because close frees 'conn'*/
+    if (ERR_OK == lwip_netconn_do_close_internal(conn  WRITE_DELAYED, SIG_CLOSE_FALSE)) {
+      sig_close = true;
+    }
+#else
     lwip_netconn_do_close_internal(conn  WRITE_DELAYED);
+#endif
   }
   /* @todo: implement connect timeout here? */
 
@@ -336,6 +355,15 @@ poll_tcp(void *arg, struct tcp_pcb *pcb)
       API_EVENT(conn, NETCONN_EVT_SENDPLUS, 0);
     }
   }
+
+#if ESP_LWIP
+  if (sig_close) {
+    sys_sem_t *op_completed_sem = LWIP_API_MSG_SEM(conn->current_msg);
+    conn->current_msg = NULL;
+    sys_sem_signal(op_completed_sem);
+    return ERR_ABRT;
+  }
+#endif
 
   return ERR_OK;
 }
@@ -351,6 +379,9 @@ static err_t
 sent_tcp(void *arg, struct tcp_pcb *pcb, u16_t len)
 {
   struct netconn *conn = (struct netconn *)arg;
+#if ESP_LWIP
+  bool sig_close = false;
+#endif
 
   LWIP_UNUSED_ARG(pcb);
   LWIP_ASSERT("conn != NULL", (conn != NULL));
@@ -359,7 +390,14 @@ sent_tcp(void *arg, struct tcp_pcb *pcb, u16_t len)
     if (conn->state == NETCONN_WRITE) {
       lwip_netconn_do_writemore(conn  WRITE_DELAYED);
     } else if (conn->state == NETCONN_CLOSE) {
+#if ESP_LWIP
+      /* Delay the netconn close until no one use 'conn' because close frees 'conn'*/
+      if (ERR_OK ==  lwip_netconn_do_close_internal(conn  WRITE_DELAYED, SIG_CLOSE_FALSE)) {
+        sig_close = true;
+      }
+#else
       lwip_netconn_do_close_internal(conn  WRITE_DELAYED);
+#endif
     }
 
     /* If the queued byte- or pbuf-count drops below the configured low-water limit,
@@ -369,6 +407,15 @@ sent_tcp(void *arg, struct tcp_pcb *pcb, u16_t len)
       conn->flags &= ~NETCONN_FLAG_CHECK_WRITESPACE;
       API_EVENT(conn, NETCONN_EVT_SENDPLUS, len);
     }
+
+#if ESP_LWIP
+    if (sig_close) {
+      sys_sem_t *op_completed_sem = LWIP_API_MSG_SEM(conn->current_msg);
+      conn->current_msg = NULL;
+      sys_sem_signal(op_completed_sem);
+      return ERR_ABRT;
+    }
+#endif
   }
 
   return ERR_OK;
@@ -838,7 +885,11 @@ netconn_drain(struct netconn *conn)
  * @param conn the TCP netconn to close
  */
 static err_t
+#if ESP_LWIP
+lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM SIG_CLOSE_PARAM)
+#else
 lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
+#endif
 {
   err_t err;
   u8_t shut, shut_rx, shut_tx, close;
@@ -1001,7 +1052,13 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
 #endif
     {
       /* wake up the application task */
+#if ESP_LWIP
+      if (sig_close) {
+        sys_sem_signal(op_completed_sem);
+      }
+#else
       sys_sem_signal(op_completed_sem);
+#endif
     }
     return ERR_OK;
   }
@@ -1039,6 +1096,10 @@ lwip_netconn_do_delconn(void *m)
   enum netconn_state state = msg->conn->state;
   LWIP_ASSERT("netconn state error", /* this only happens for TCP netconns */
     (state == NETCONN_NONE) || (NETCONNTYPE_GROUP(msg->conn->type) == NETCONN_TCP));
+#if ESP_LWIP
+  msg->err = ERR_OK;
+#endif
+
 #if LWIP_NETCONN_FULLDUPLEX
   /* In full duplex mode, blocking write/connect is aborted with ERR_CLSD */
   if (state != NETCONN_NONE) {
@@ -1053,6 +1114,9 @@ lwip_netconn_do_delconn(void *m)
       msg->conn->write_offset = 0;
       msg->conn->state = NETCONN_NONE;
       NETCONN_SET_SAFE_ERR(msg->conn, ERR_CLSD);
+#if ESP_LWIP
+      msg->err = ERR_INPROGRESS;
+#endif
       sys_sem_signal(op_completed_sem);
     }
   }
@@ -1095,7 +1159,11 @@ lwip_netconn_do_delconn(void *m)
         msg->msg.sd.shut = NETCONN_SHUT_RDWR;
         msg->conn->current_msg = msg;
 #if LWIP_TCPIP_CORE_LOCKING
+#if ESP_LWIP
+        if (lwip_netconn_do_close_internal(msg->conn, 0, SIG_CLOSE_TRUE) != ERR_OK) {
+#else
         if (lwip_netconn_do_close_internal(msg->conn, 0) != ERR_OK) {
+#endif
           LWIP_ASSERT("state!", msg->conn->state == NETCONN_CLOSE);
           UNLOCK_TCPIP_CORE();
           sys_arch_sem_wait(LWIP_API_MSG_SEM(msg), 0);
@@ -1103,7 +1171,11 @@ lwip_netconn_do_delconn(void *m)
           LWIP_ASSERT("state!", msg->conn->state == NETCONN_NONE);
         }
 #else /* LWIP_TCPIP_CORE_LOCKING */
+#if ESP_LWIP
+        lwip_netconn_do_close_internal(msg->conn, SIG_CLOSE_TRUE);
+#else
         lwip_netconn_do_close_internal(msg->conn);
+#endif
 #endif /* LWIP_TCPIP_CORE_LOCKING */
         /* API_EVENT is called inside lwip_netconn_do_close_internal, before releasing
            the application thread, so we can return at this point! */
@@ -1837,7 +1909,11 @@ lwip_netconn_do_close(void *m)
       msg->conn->state = NETCONN_CLOSE;
       msg->conn->current_msg = msg;
 #if LWIP_TCPIP_CORE_LOCKING
+#if ESP_LWIP
+      if (lwip_netconn_do_close_internal(msg->conn, 0, SIG_CLOSE_TRUE) != ERR_OK) {
+#else
       if (lwip_netconn_do_close_internal(msg->conn, 0) != ERR_OK) {
+#endif
         LWIP_ASSERT("state!", msg->conn->state == NETCONN_CLOSE);
         UNLOCK_TCPIP_CORE();
         sys_arch_sem_wait(LWIP_API_MSG_SEM(msg), 0);
@@ -1845,7 +1921,11 @@ lwip_netconn_do_close(void *m)
         LWIP_ASSERT("state!", msg->conn->state == NETCONN_NONE);
       }
 #else /* LWIP_TCPIP_CORE_LOCKING */
+#if ESP_LWIP
+      lwip_netconn_do_close_internal(msg->conn, SIG_CLOSE_TRUE);
+#else
       lwip_netconn_do_close_internal(msg->conn);
+#endif
 #endif /* LWIP_TCPIP_CORE_LOCKING */
       /* for tcp netconns, lwip_netconn_do_close_internal ACKs the message */
       return;
