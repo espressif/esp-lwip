@@ -220,9 +220,9 @@ pppos_write(ppp_pcb *ppp, void *ctx, struct pbuf *p)
   /* If the link has been idle, we'll send a fresh flag character to
    * flush any noise. */
   err = ERR_OK;
-  if ((sys_now() - pppos->last_xmit) >= PPP_MAXIDLEFLAG) {
+  //if ((sys_now() - pppos->last_xmit) >= PPP_MAXIDLEFLAG) {
     err = pppos_output_append(pppos, err,  nb, PPP_FLAG, 0, NULL);
-  }
+  //}
 
   /* Load output buffer. */
   fcs_out = PPP_INITFCS;
@@ -265,9 +265,9 @@ pppos_netif_output(ppp_pcb *ppp, void *ctx, struct pbuf *pb, u16_t protocol)
   /* If the link has been idle, we'll send a fresh flag character to
    * flush any noise. */
   err = ERR_OK;
-  if ((sys_now() - pppos->last_xmit) >= PPP_MAXIDLEFLAG) {
+  //if ((sys_now() - pppos->last_xmit) >= PPP_MAXIDLEFLAG) {
     err = pppos_output_append(pppos, err,  nb, PPP_FLAG, 0, NULL);
-  }
+  //}
 
   fcs_out = PPP_INITFCS;
   if (!pppos->accomp) {
