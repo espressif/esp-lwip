@@ -273,6 +273,14 @@ dhcp_handle_nak(struct netif *netif)
   dhcp_set_state(dhcp, DHCP_STATE_BACKING_OFF);
   /* remove IP address from interface (must no longer be used, as per RFC2131) */
   netif_set_addr(netif, IP4_ADDR_ANY4, IP4_ADDR_ANY4, IP4_ADDR_ANY4);
+
+  if (dhcp->cb != NULL) {
+#ifdef ESP_DHCP
+    dhcp->cb(netif);
+#else
+    dhcp->cb();
+#endif
+  }
   /* We can immediately restart discovery */
   dhcp_discover(netif);
 }
@@ -1369,6 +1377,15 @@ dhcp_release(struct netif *netif)
   }
   /* remove IP address from interface (prevents routing from selecting this interface) */
   netif_set_addr(netif, IP4_ADDR_ANY4, IP4_ADDR_ANY4, IP4_ADDR_ANY4);
+
+  if (dhcp->cb != NULL) {
+#ifdef ESP_DHCP
+    dhcp->cb(netif);
+#else
+    dhcp->cb();
+#endif
+  }
+
 
   return result;
 }
