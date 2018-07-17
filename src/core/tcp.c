@@ -1569,7 +1569,7 @@ typedef struct {
     u8_t total;
 }tcp_pcb_num_t;
 
-void tcp_pcb_num_cal(tcp_pcb_num_t *tcp_pcb_num)
+static void tcp_pcb_num_cal(tcp_pcb_num_t *tcp_pcb_num)
 {
     struct tcp_pcb_listen *listen;
     struct tcp_pcb *pcb;
