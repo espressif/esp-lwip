@@ -66,6 +66,10 @@
 #define HANDLER(x) x
 #endif /* LWIP_DEBUG_TIMERNAMES */
 
+#if ESP_DHCP
+extern void dhcps_coarse_tmr(void);
+#endif 
+
 /** This array contains all stack-internal cyclic timers. To get the number of
  * timers, use LWIP_ARRAYSIZE() */
 const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
@@ -84,6 +88,9 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
 #if LWIP_DHCP
   {DHCP_COARSE_TIMER_MSECS, HANDLER(dhcp_coarse_tmr)},
   {DHCP_FINE_TIMER_MSECS, HANDLER(dhcp_fine_tmr)},
+#if ESP_DHCP
+  {DHCP_COARSE_TIMER_MSECS, HANDLER(dhcps_coarse_tmr)},
+#endif
 #endif /* LWIP_DHCP */
 #if LWIP_AUTOIP
   {AUTOIP_TMR_INTERVAL, HANDLER(autoip_tmr)},
