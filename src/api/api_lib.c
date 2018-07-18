@@ -93,7 +93,7 @@ netconn_apimsg(tcpip_callback_fn fn, struct api_msg *apimsg)
 {
   err_t err;
 
-#ifdef LWIP_DEBUG
+#if LWIP_DEBUG
   /* catch functions that don't set err */
   apimsg->err = ERR_VAL;
 #endif /* LWIP_DEBUG */
