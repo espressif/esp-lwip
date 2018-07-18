@@ -1093,7 +1093,12 @@ tcp_slowtmr_start:
       }
     }
     /* Check if this PCB has stayed too long in FIN-WAIT-2 */
+#if ESP_LWIP
+    /* If the TCP connection is in FIN_WAIT_1 for too long time, remove it */
+    if ((pcb->state == FIN_WAIT_2) || (pcb->state == FIN_WAIT_1)) {
+#else
     if (pcb->state == FIN_WAIT_2) {
+#endif
       /* If this PCB is in FIN_WAIT_2 because of SHUT_WR don't let it time out. */
       if (pcb->flags & TF_RXCLOSED) {
         /* PCB was fully closed (either through close() or SHUT_RDWR):
