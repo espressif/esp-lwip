@@ -563,7 +563,11 @@ dhcp_t1_timeout(struct netif *netif)
        DHCP_STATE_RENEWING, not DHCP_STATE_BOUND */
     dhcp_renew(netif);
     /* Calculate next timeout */
+#if ESP_DHCP_TIMER
+    if (((dhcp->t2_timeout - dhcp->lease_used) / 2)*DHCP_COARSE_TIMER_SECS >= 3)
+#else
     if (((dhcp->t2_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS))
+#endif
     {
        dhcp->t1_renew_time = ((dhcp->t2_timeout - dhcp->lease_used) / 2);
     }
@@ -590,7 +594,11 @@ dhcp_t2_timeout(struct netif *netif)
        DHCP_STATE_REBINDING, not DHCP_STATE_BOUND */
     dhcp_rebind(netif);
     /* Calculate next timeout */
+#if ESP_DHCP_TIMER
+    if (((dhcp->t0_timeout - dhcp->lease_used) / 2)*DHCP_COARSE_TIMER_SECS >= 3)
+#else
     if (((dhcp->t0_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS))
+#endif 
     {
        dhcp->t2_rebind_time = ((dhcp->t0_timeout - dhcp->lease_used) / 2);
     }
@@ -1060,7 +1068,15 @@ dhcp_discover(struct netif *netif)
     autoip_start(netif);
   }
 #endif /* LWIP_DHCP_AUTOIP_COOP */
+
+#if ESP_DHCP
+/* Since for embedded devices it's not that hard to miss a discover packet, so lower
+   * the discover retry backoff time from (2,4,8,16,32,60,60)s to (500m,1,2,4,8,15,15)s.
+   */
+  msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 250;
+#else
   msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000;
+#endif
   dhcp->request_timeout = (msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS;
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_discover(): set request timeout %"U16_F" msecs\n", msecs));
   return result;
@@ -1086,6 +1102,47 @@ dhcp_bind(struct netif *netif)
   /* reset time used of lease */
   dhcp->lease_used = 0;
 
+#if ESP_DHCP_TIMER
+  if (dhcp->offered_t0_lease != 0xffffffffUL) {
+     /* set renewal period timer */
+     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t0 renewal timer %"U32_F" secs\n", dhcp->offered_t0_lease));
+     timeout = dhcp->offered_t0_lease;
+     dhcp->t0_timeout = timeout;
+     if (dhcp->t0_timeout == 0) {
+       dhcp->t0_timeout = 120;
+     }
+     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t0_lease*1000));
+  }
+
+  /* temporary DHCP lease? */
+  if (dhcp->offered_t1_renew != 0xffffffffUL) {
+    /* set renewal period timer */
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t1 renewal timer %"U32_F" secs\n", dhcp->offered_t1_renew));
+    timeout = dhcp->offered_t1_renew;
+    dhcp->t1_timeout = timeout;
+    if (dhcp->t1_timeout == 0) {
+      dhcp->t1_timeout = dhcp->t0_timeout>>1;
+    }
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t1_renew*1000));
+    dhcp->t1_renew_time = dhcp->t1_timeout;
+  }
+  /* set renewal period timer */
+  if (dhcp->offered_t2_rebind != 0xffffffffUL) {
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t2 rebind timer %"U32_F" secs\n", dhcp->offered_t2_rebind));
+    timeout = dhcp->offered_t2_rebind;
+    dhcp->t2_timeout = timeout;
+    if (dhcp->t2_timeout == 0) {
+      dhcp->t2_timeout = (dhcp->t0_timeout>>3)*7;
+    }
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t2_rebind*1000));
+    dhcp->t2_rebind_time = dhcp->t2_timeout;
+  }
+
+  /* If we have sub 1 minute lease, t2 and t1 will kick in at the same time. */
+  if ((dhcp->t1_timeout >= dhcp->t2_timeout) && (dhcp->t2_timeout > 0)) {
+    dhcp->t1_timeout = 0;
+  }
+#else
   if (dhcp->offered_t0_lease != 0xffffffffUL) {
      /* set renewal period timer */
      LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t0 renewal timer %"U32_F" secs\n", dhcp->offered_t0_lease));
@@ -1134,6 +1191,7 @@ dhcp_bind(struct netif *netif)
   if ((dhcp->t1_timeout >= dhcp->t2_timeout) && (dhcp->t2_timeout > 0)) {
     dhcp->t1_timeout = 0;
   }
+#endif
 
   if (dhcp->subnet_mask_given) {
     /* copy offered network mask */
