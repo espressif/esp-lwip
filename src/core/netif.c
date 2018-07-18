@@ -510,14 +510,30 @@ netif_set_ipaddr(struct netif *netif, const ip4_addr_t *ipaddr)
   *ip_2_ip4(&new_addr) = (ipaddr ? *ipaddr : *IP4_ADDR_ANY4);
   IP_SET_TYPE_VAL(new_addr, IPADDR_TYPE_V4);
 
+#if ESP_LWIP
+#if ESP_TCP_KEEP_CONNECTION_WHEN_IP_CHANGES
+  ip_addr_t *last_addr = &(netif->last_ip_addr);
+#else
+  ip_addr_t *last_addr = &(netif->ip_addr);
+#endif
+#endif
+
   /* address is actually being changed? */
   if (ip4_addr_cmp(ip_2_ip4(&new_addr), netif_ip4_addr(netif)) == 0) {
     LWIP_DEBUGF(NETIF_DEBUG | LWIP_DBG_STATE, ("netif_set_ipaddr: netif address being changed\n"));
 #if LWIP_TCP
+#if ESP_LWIP
+    tcp_netif_ip_addr_changed(last_addr, &new_addr);
+#else
     tcp_netif_ip_addr_changed(netif_ip_addr4(netif), &new_addr);
+#endif
 #endif /* LWIP_TCP */
 #if LWIP_UDP
+#if ESP_LWIP
+    udp_netif_ip_addr_changed(last_addr, &new_addr);
+#else
     udp_netif_ip_addr_changed(netif_ip_addr4(netif), &new_addr);
+#endif
 #endif /* LWIP_UDP */
 #if LWIP_RAW
     raw_netif_ip_addr_changed(netif_ip_addr4(netif), &new_addr);
@@ -542,6 +558,12 @@ netif_set_ipaddr(struct netif *netif, const ip4_addr_t *ipaddr)
     ip4_addr2_16(netif_ip4_addr(netif)),
     ip4_addr3_16(netif_ip4_addr(netif)),
     ip4_addr4_16(netif_ip4_addr(netif))));
+
+#if ESP_LWIP
+  if (ipaddr && !ip4_addr_isany(ipaddr)) {
+    ip4_addr_set(ip_2_ip4(&netif->last_ip_addr), ipaddr);
+  }
+#endif
 }
 
 /**

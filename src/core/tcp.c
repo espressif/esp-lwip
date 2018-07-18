@@ -2103,8 +2103,14 @@ tcp_netif_ip_addr_changed(const ip_addr_t* old_addr, const ip_addr_t* new_addr)
   struct tcp_pcb_listen *lpcb, *next;
 
   if (!ip_addr_isany(old_addr)) {
+#if ESP_TCP_KEEP_CONNECTION_WHEN_IP_CHANGES
+    if ((new_addr == NULL) || ((!ip_addr_isany_val(*new_addr)) && (!ip_addr_cmp(old_addr, new_addr)))) {
+#endif
     tcp_netif_ip_addr_changed_pcblist(old_addr, tcp_active_pcbs);
     tcp_netif_ip_addr_changed_pcblist(old_addr, tcp_bound_pcbs);
+#if ESP_TCP_KEEP_CONNECTION_WHEN_IP_CHANGES
+    }
+#endif
 
     if (!ip_addr_isany(new_addr)) {
       /* PCB bound to current local interface address? */
