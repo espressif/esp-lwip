@@ -67,6 +67,7 @@
 #include "lwip/autoip.h"
 #include "lwip/etharp.h"
 #include "lwip/prot/autoip.h"
+#include "lwip/dhcp.h"
 
 #include <string.h>
 
@@ -241,6 +242,12 @@ autoip_bind(struct netif *netif)
   netif_set_addr(netif, &autoip->llipaddr, &sn_mask, &gw_addr);
   /* interface is used by routing now that an address is set */
 
+#if ESP_LWIP
+  struct dhcp *dhcp = netif->dhcp;
+  if (dhcp->cb != NULL) {
+    dhcp->cb(netif);
+  }
+#endif
   return ERR_OK;
 }
 
