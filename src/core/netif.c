@@ -429,6 +429,18 @@ netif_remove(struct netif *netif)
     netif_set_down(netif);
   }
 
+#if ESP_LWIP
+#if LWIP_DHCP
+  /* netif not under DHCP control by default */
+  struct dhcp *dhcp;
+  dhcp = netif_dhcp_data(netif);
+  if (dhcp) {
+    free(dhcp);
+    dhcp = NULL;
+  }
+#endif /* LWIP_DHCP */
+#endif
+
   mib2_remove_ip4(netif);
 
   /* this netif is default? */
