@@ -153,6 +153,19 @@ static u8_t dhcp_discover_request_options[] = {
 #if LWIP_DHCP_PROVIDE_DNS_SERVERS
   , DHCP_OPTION_DNS_SERVER
 #endif /* LWIP_DHCP_PROVIDE_DNS_SERVERS */
+
+#if ESP_DHCP
+/**add options for support more router by liuHan**/
+   , DHCP_OPTION_DOMAIN_NAME, 
+    DHCP_OPTION_NB_TINS, 
+    DHCP_OPTION_NB_TINT, 
+    DHCP_OPTION_NB_TIS, 
+    DHCP_OPTION_PRD, 
+    DHCP_OPTION_STATIC_ROUTER, 
+    DHCP_OPTION_CLASSLESS_STATIC_ROUTER, 
+    DHCP_OPTION_VSN 
+#endif
+
 #if LWIP_DHCP_GET_NTP_SRV
   , DHCP_OPTION_NTP
 #endif /* LWIP_DHCP_GET_NTP_SRV */
@@ -765,6 +778,14 @@ dhcp_start(struct netif *netif)
   LWIP_ERROR("netif is not up, old style port?", netif_is_up(netif), return ERR_ARG;);
   dhcp = netif_dhcp_data(netif);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_start(netif=%p) %c%c%"U16_F"\n", (void*)netif, netif->name[0], netif->name[1], (u16_t)netif->num));
+
+#if ESP_LWIP
+  /* check hwtype of the netif */
+  if ((netif->flags & NETIF_FLAG_ETHARP) == 0) {
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_start(): No ETHARP netif\n"));
+    return ERR_ARG;
+  }
+#endif
 
   /* check MTU of the netif */
   if (netif->mtu < DHCP_MAX_MSG_LEN_MIN_REQUIRED) {

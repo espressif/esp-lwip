@@ -269,8 +269,12 @@ netif_add(struct netif *netif,
   memset(netif->client_data, 0, sizeof(netif->client_data));
 #endif /* LWIP_NUM_NETIF_CLIENT_DATA */
 #if LWIP_IPV6_AUTOCONFIG
+#if ESP_IPV6_AUTOCONFIG
+  netif->ip6_autoconfig_enabled = 1;
+#else
   /* IPv6 address autoconfiguration not enabled by default */
   netif->ip6_autoconfig_enabled = 0;
+#endif
 #endif /* LWIP_IPV6_AUTOCONFIG */
 #if LWIP_IPV6_SEND_ROUTER_SOLICIT
   netif->rs_count = LWIP_ND6_MAX_MULTICAST_SOLICIT;

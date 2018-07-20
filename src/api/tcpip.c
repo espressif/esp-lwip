@@ -125,7 +125,13 @@ tcpip_thread(void *arg)
 #if !LWIP_TCPIP_CORE_LOCKING_INPUT
     case TCPIP_MSG_INPKT:
       LWIP_DEBUGF(TCPIP_DEBUG, ("tcpip_thread: PACKET %p\n", (void *)msg));
-      msg->msg.inp.input_fn(msg->msg.inp.p, msg->msg.inp.netif);
+#if ESP_LWIP
+      if(msg->msg.inp.p != NULL && msg->msg.inp.netif != NULL) {
+#endif
+        msg->msg.inp.input_fn(msg->msg.inp.p, msg->msg.inp.netif);
+#if ESP_LWIP
+      }
+#endif
       memp_free(MEMP_TCPIP_MSG_INPKT, msg);
       break;
 #endif /* !LWIP_TCPIP_CORE_LOCKING_INPUT */
@@ -182,7 +188,13 @@ tcpip_inpkt(struct pbuf *p, struct netif *inp, netif_input_fn input_fn)
 #else /* LWIP_TCPIP_CORE_LOCKING_INPUT */
   struct tcpip_msg *msg;
 
+#if ESP_LWIP
+  if (!sys_mbox_valid_val(mbox)) {
+    return ERR_VAL;
+  }
+#else
   LWIP_ASSERT("Invalid mbox", sys_mbox_valid_val(mbox));
+#endif
 
   msg = (struct tcpip_msg *)memp_malloc(MEMP_TCPIP_MSG_INPKT);
   if (msg == NULL) {
@@ -522,10 +534,22 @@ pbuf_free_callback(struct pbuf *p)
  * @param m the heap memory to free
  * @return ERR_OK if callback could be enqueued, an err_t if not
  */
+
+#if ESP_LWIP
+static void mem_free_local(void *arg)
+{
+  mem_free(arg);
+}
+err_t mem_free_callback(void *m)
+{
+  return tcpip_callback_with_block(mem_free_local, m, 0);
+}   
+#else
 err_t
 mem_free_callback(void *m)
 {
   return tcpip_callback_with_block(mem_free, m, 0);
 }
+#endif
 
 #endif /* !NO_SYS */

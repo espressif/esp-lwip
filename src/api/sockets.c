@@ -1371,6 +1371,14 @@ lwip_sendto(int s, const void *data, size_t size, int flags,
 #endif /* LWIP_TCP */
   }
 
+#if ESP_LWIP
+  if ((to != NULL) && !SOCK_ADDR_TYPE_MATCH(to, sock)) {
+    /* sockaddr does not match socket type (IPv4/IPv6) */
+    sock_set_errno(sock, err_to_errno(ERR_VAL));
+    return -1;
+  }
+#endif
+
   /* @todo: split into multiple sendto's? */
   LWIP_ASSERT("lwip_sendto: size must fit in u16_t", size <= 0xffff);
   short_size = (u16_t)size;
