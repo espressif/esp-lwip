@@ -1413,14 +1413,6 @@ lwip_sendto(int s, const void *data, size_t size, int flags,
 #endif /* LWIP_TCP */
   }
 
-#if ESP_LWIP
-  if ((to != NULL) && !SOCK_ADDR_TYPE_MATCH(to, sock)) {
-    /* sockaddr does not match socket type (IPv4/IPv6) */
-    sock_set_errno(sock, err_to_errno(ERR_VAL));
-    return -1;
-  }
-#endif
-
   /* @todo: split into multiple sendto's? */
   LWIP_ASSERT("lwip_sendto: size must fit in u16_t", size <= 0xffff);
   short_size = (u16_t)size;
@@ -2855,7 +2847,11 @@ lwip_setsockopt_impl(int s, int level, int optname, const void *optval, socklen_
   case IPPROTO_IPV6:
     switch (optname) {
     case IPV6_V6ONLY:
+#if ESP_LWIP
+      LWIP_SOCKOPT_CHECK_OPTLEN_CONN(sock, optlen, int);
+#else
       LWIP_SOCKOPT_CHECK_OPTLEN_CONN_PCB_TYPE(sock, optlen, int, NETCONN_TCP);
+#endif
       if (*(const int*)optval) {
         netconn_set_ipv6only(sock->conn, 1);
       } else {
