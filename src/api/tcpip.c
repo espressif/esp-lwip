@@ -87,7 +87,11 @@ sys_mutex_t lock_tcpip_core;
  *
  * @param arg unused argument
  */
+#if ESP_LWIP
+static void ESP_IRAM_ATTR
+#else
 static void
+#endif
 tcpip_thread(void *arg)
 {
   struct tcpip_msg *msg;
@@ -175,7 +179,11 @@ tcpip_thread(void *arg)
  * @param inp the network interface on which the packet was received
  * @param input_fn input function to call
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 tcpip_inpkt(struct pbuf *p, struct netif *inp, netif_input_fn input_fn)
 {
 #if LWIP_TCPIP_CORE_LOCKING_INPUT
@@ -225,7 +233,11 @@ tcpip_inpkt(struct pbuf *p, struct netif *inp, netif_input_fn input_fn)
  *          NETIF_FLAG_ETHERNET flags)
  * @param inp the network interface on which the packet was received
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 tcpip_input(struct pbuf *p, struct netif *inp)
 {
 #if LWIP_ETHERNET
@@ -342,7 +354,11 @@ tcpip_untimeout(sys_timeout_handler h, void *arg)
  * @param sem semaphore to wait on
  * @return ERR_OK if the function was called, another err_t if not
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 tcpip_send_msg_wait_sem(tcpip_callback_fn fn, void *apimsg, sys_sem_t* sem)
 {
 #if LWIP_TCPIP_CORE_LOCKING

@@ -88,7 +88,11 @@ static err_t netconn_close_shutdown(struct netconn *conn, u8_t how);
  * @param apimsg a struct containing the function to call and its parameters
  * @return ERR_OK if the function was called, another err_t if not
  */
+#if ESP_LWIP
+static err_t ESP_IRAM_ATTR
+#else
 static err_t
+#endif
 netconn_apimsg(tcpip_callback_fn fn, struct api_msg *apimsg)
 {
   err_t err;
@@ -491,7 +495,11 @@ netconn_accept(struct netconn *conn, struct netconn **new_conn)
  * @return ERR_OK if data has been received, an error code otherwise (timeout,
  *                memory error or another error)
  */
+#if ESP_LWIP
+static err_t ESP_IRAM_ATTR
+#else
 static err_t
+#endif 
 netconn_recv_data(struct netconn *conn, void **new_buf)
 {
   void *buf = NULL;
@@ -624,7 +632,11 @@ netconn_recv_data(struct netconn *conn, void **new_buf)
  *                memory error or another error)
  *         ERR_ARG if conn is not a TCP netconn
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 netconn_recv_tcp_pbuf(struct netconn *conn, struct pbuf **new_buf)
 {
   LWIP_ERROR("netconn_recv: invalid conn", (conn != NULL) &&
@@ -642,7 +654,11 @@ netconn_recv_tcp_pbuf(struct netconn *conn, struct pbuf **new_buf)
  * @return ERR_OK if data has been received, an error code otherwise (timeout,
  *                memory error or another error)
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 netconn_recv(struct netconn *conn, struct netbuf **new_buf)
 {
 #if LWIP_TCP
@@ -723,7 +739,11 @@ netconn_sendto(struct netconn *conn, struct netbuf *buf, const ip_addr_t *addr, 
  * @param buf a netbuf containing the data to send
  * @return ERR_OK if data was sent, any other err_t on error
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 netconn_send(struct netconn *conn, struct netbuf *buf)
 {
   API_MSG_VAR_DECLARE(msg);
@@ -756,7 +776,11 @@ netconn_send(struct netconn *conn, struct netbuf *buf)
  * @param bytes_written pointer to a location that receives the number of written bytes
  * @return ERR_OK if data was sent, any other err_t on error
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 netconn_write_partly(struct netconn *conn, const void *dataptr, size_t size,
                      u8_t apiflags, size_t *bytes_written)
 {

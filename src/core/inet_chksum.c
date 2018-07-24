@@ -256,7 +256,11 @@ lwip_standard_chksum(const void *dataptr, int len)
 #endif
 
 /** Parts of the pseudo checksum which are common to IPv4 and IPv6 */
+#if ESP_LWIP
+static u16_t ESP_IRAM_ATTR
+#else
 static u16_t
+#endif
 inet_cksum_pseudo_base(struct pbuf *p, u8_t proto, u16_t proto_len, u32_t acc)
 {
   struct pbuf *q;
@@ -306,7 +310,11 @@ inet_cksum_pseudo_base(struct pbuf *p, u8_t proto, u16_t proto_len, u32_t acc)
  * @param proto_len length of the ip data part (used for checksum of pseudo header)
  * @return checksum (as u16_t) to be saved directly in the protocol header
  */
+#if ESP_LWIP
+u16_t ESP_IRAM_ATTR
+#else
 u16_t
+#endif
 inet_chksum_pseudo(struct pbuf *p, u8_t proto, u16_t proto_len,
        const ip4_addr_t *src, const ip4_addr_t *dest)
 {
@@ -375,7 +383,11 @@ ip6_chksum_pseudo(struct pbuf *p, u8_t proto, u16_t proto_len,
  * @param proto_len length of the ip data part (used for checksum of pseudo header)
  * @return checksum (as u16_t) to be saved directly in the protocol header
  */
+#if ESP_LWIP
+u16_t ESP_IRAM_ATTR
+#else
 u16_t
+#endif
 ip_chksum_pseudo(struct pbuf *p, u8_t proto, u16_t proto_len,
        const ip_addr_t *src, const ip_addr_t *dest)
 {

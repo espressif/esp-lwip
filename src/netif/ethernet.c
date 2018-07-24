@@ -77,7 +77,11 @@ const struct eth_addr ethzero = {{0,0,0,0,0,0}};
  * @see ETHARP_SUPPORT_VLAN
  * @see LWIP_HOOK_VLAN_CHECK
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 ethernet_input(struct pbuf *p, struct netif *netif)
 {
   struct eth_hdr* ethhdr;

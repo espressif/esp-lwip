@@ -244,7 +244,11 @@ pbuf_pool_is_empty(void)
  * @return the allocated pbuf. If multiple pbufs where allocated, this
  * is the first pbuf of a pbuf chain.
  */
+#if ESP_LWIP
+struct pbuf * ESP_IRAM_ATTR
+#else
 struct pbuf *
+#endif
 pbuf_alloc(pbuf_layer layer, u16_t length, pbuf_type type)
 {
   struct pbuf *p, *q, *r;
@@ -571,7 +575,11 @@ pbuf_realloc(struct pbuf *p, u16_t new_len)
  * @return non-zero on failure, zero on success.
  *
  */
+#if ESP_LWIP
+static u8_t ESP_IRAM_ATTR
+#else
 static u8_t
+#endif
 pbuf_header_impl(struct pbuf *p, s16_t header_size_increment, u8_t force)
 {
   u16_t type;
@@ -667,7 +675,11 @@ pbuf_header_impl(struct pbuf *p, s16_t header_size_increment, u8_t force)
  * @return non-zero on failure, zero on success.
  *
  */
+#if ESP_LWIP
+u8_t ESP_IRAM_ATTR
+#else
 u8_t
+#endif
 pbuf_header(struct pbuf *p, s16_t header_size_increment)
 {
    return pbuf_header_impl(p, header_size_increment, 0);

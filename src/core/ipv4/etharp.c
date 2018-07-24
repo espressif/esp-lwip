@@ -742,7 +742,11 @@ etharp_input(struct pbuf *p, struct netif *netif)
 /** Just a small helper function that sends a pbuf to an ethernet address
  * in the arp_table specified by the index 'arp_idx'.
  */
+#if ESP_LWIP
+static err_t ESP_IRAM_ATTR
+#else
 static err_t
+#endif
 etharp_output_to_arp_index(struct netif *netif, struct pbuf *q, u8_t arp_idx)
 {
   LWIP_ASSERT("arp_table[arp_idx].state >= ETHARP_STATE_STABLE",
@@ -785,7 +789,11 @@ etharp_output_to_arp_index(struct netif *netif, struct pbuf *q, u8_t arp_idx)
  * - ERR_RTE No route to destination (no gateway to external networks),
  * or the return type of either etharp_query() or ethernet_output().
  */
+#if ESP_LWIP
+err_t ESP_IRAM_ATTR
+#else
 err_t
+#endif
 etharp_output(struct netif *netif, struct pbuf *q, const ip4_addr_t *ipaddr)
 {
   const struct eth_addr *dest;
