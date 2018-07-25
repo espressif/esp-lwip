@@ -164,7 +164,7 @@ ip4addr_aton(const char *cp, ip4_addr_t *addr)
   u32_t parts[4];
   u32_t *pp = parts;
 
-#if ESP_LWIP
+#if ESP_IP4_ATON
   char ch;
   unsigned long cutoff;
   int cutlim;

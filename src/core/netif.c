@@ -433,7 +433,7 @@ netif_remove(struct netif *netif)
     netif_set_down(netif);
   }
 
-#if ESP_LWIP
+#if 0
 #if LWIP_DHCP
   /* netif not under DHCP control by default */
   struct dhcp *dhcp;
