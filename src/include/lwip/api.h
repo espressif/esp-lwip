@@ -69,6 +69,11 @@ extern "C" {
 #define NETCONN_FLAG_NON_BLOCKING             0x02
 /** Was the last connect action a non-blocking one? */
 #define NETCONN_FLAG_IN_NONBLOCKING_CONNECT   0x04
+#if ESP_AUTO_RECV
+/** If this is set, a TCP netconn must call netconn_recved() to update
+    the TCP receive window (done automatically if not set). */
+#define NETCONN_FLAG_NO_AUTO_RECVED           0x08
+#endif
 /** If a nonblocking write has been rejected before, poll_tcp needs to
     check if the netconn is writable again */
 #define NETCONN_FLAG_CHECK_WRITESPACE         0x10
@@ -314,6 +319,9 @@ err_t   netconn_listen_with_backlog(struct netconn *conn, u8_t backlog);
 err_t   netconn_accept(struct netconn *conn, struct netconn **new_conn);
 err_t   netconn_recv(struct netconn *conn, struct netbuf **new_buf);
 err_t   netconn_recv_tcp_pbuf(struct netconn *conn, struct pbuf **new_buf);
+#if ESP_AUTO_RECV
+void    netconn_recved(struct netconn *conn, u32_t length);
+#endif
 err_t   netconn_sendto(struct netconn *conn, struct netbuf *buf,
                              const ip_addr_t *addr, u16_t port);
 err_t   netconn_send(struct netconn *conn, struct netbuf *buf);
@@ -349,6 +357,16 @@ err_t   netconn_gethostbyname(const char *name, ip_addr_t *addr);
   (conn)->flags &= ~ NETCONN_FLAG_NON_BLOCKING; }} while(0)
 /** Get the blocking status of netconn calls (@todo: write/send is missing) */
 #define netconn_is_nonblocking(conn)        (((conn)->flags & NETCONN_FLAG_NON_BLOCKING) != 0)
+
+#if ESP_AUTO_RECV
+/** TCP: Set the no-auto-recved status of netconn calls (see NETCONN_FLAG_NO_AUTO_RECVED) */
+#define netconn_set_noautorecved(conn, val)  do { if(val) { \
+  (conn)->flags |= NETCONN_FLAG_NO_AUTO_RECVED; \
+} else { \
+  (conn)->flags &= ~ NETCONN_FLAG_NO_AUTO_RECVED; }} while(0)
+/** TCP: Get the no-auto-recved status of netconn calls (see NETCONN_FLAG_NO_AUTO_RECVED) */
+#define netconn_get_noautorecved(conn)        (((conn)->flags & NETCONN_FLAG_NO_AUTO_RECVED) != 0)
+#endif
 
 #if LWIP_IPV6
 /** @ingroup netconn_common

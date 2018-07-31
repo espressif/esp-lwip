@@ -31,6 +31,7 @@ limitations under the License.
 #define ESP_TCP_KEEP_CONNECTION_WHEN_IP_CHANGES 0 
 #define ESP_RANDOM_TCP_PORT                     0
 #define ESP_IP4_ATON                            0
+#define ESP_AUTO_RECV                           0
 
 #include "../lwipopts.h"
 
