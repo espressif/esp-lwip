@@ -1025,7 +1025,11 @@ lwip_recvfrom(int s, void *mem, size_t len, int flags,
           return off;
         }
         LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_recvfrom(%d): returning EWOULDBLOCK\n", s));
+#if ESP_LWIP
+        sock_set_errno(sock, EWOULDBLOCK);
+#else
         set_errno(EWOULDBLOCK);
+#endif
         return -1;
       }
 
