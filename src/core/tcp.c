@@ -1514,7 +1514,9 @@ tcp_kill_state(enum tcp_state state)
   struct tcp_pcb *pcb, *inactive;
   u32_t inactivity;
 
+#if !ESP_LWIP
   LWIP_ASSERT("invalid state", (state == CLOSING) || (state == LAST_ACK));
+#endif
 
   inactivity = 0;
   inactive = NULL;
