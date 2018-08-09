@@ -1154,9 +1154,11 @@ lwip_netconn_do_delconn(void *m)
   } else
 #endif /* LWIP_NETCONN_FULLDUPLEX */
   {
+#if !ESP_LWIP
     LWIP_ASSERT("blocking connect in progress",
       (state != NETCONN_CONNECT) || IN_NONBLOCKING_CONNECT(msg->conn));
     msg->err = ERR_OK;
+#endif
     /* Drain and delete mboxes */
     netconn_drain(msg->conn);
 
