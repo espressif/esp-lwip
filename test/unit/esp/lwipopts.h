@@ -22,16 +22,16 @@ limitations under the License.
 
 /* ESP specific cofiguration */
 #define ESP_LWIP                                1
-#define ESP_STATS_DROP                          0
-#define ESP_DHCP                                0
-#define ESP_DHCP_TIMER                          0
+#define ESP_DHCP                                1 
+#define ESP_DHCP_TIMER                          1 
 #define ESP_DHCPS_TIMER                         0
+#define ESP_TCP_KEEP_CONNECTION_WHEN_IP_CHANGES 1 
+#define ESP_IP4_ATON                            1
+#define ESP_AUTO_RECV                           1
+#define ESP_STATS_DROP                          0
 #define ESP_STATS_TCP                           0
 #define ESP_IRAM_ATTR                   
-#define ESP_TCP_KEEP_CONNECTION_WHEN_IP_CHANGES 0 
-#define ESP_RANDOM_TCP_PORT                     0
-#define ESP_IP4_ATON                            0
-#define ESP_AUTO_RECV                           0
+#define ESP_RANDOM_TCP_PORT                     0 
 
 #include "../lwipopts.h"
 
