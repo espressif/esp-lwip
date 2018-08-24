@@ -1153,6 +1153,21 @@ lwip_recvfrom(int s, void *mem, size_t len, int flags,
           MEMCPY(from, &saddr, *fromlen);
         }
       }
+#if ESP_LWIP
+      /*fix the code for setting the UDP PROTO's remote infomation by liuh at 2014.8.27*/
+      if (!from || !fromlen) {
+          if (NETCONNTYPE_GROUP(netconn_type(sock->conn)) == NETCONN_UDP) {
+            u16_t port;
+            ip_addr_t *fromaddr;
+
+            port = netbuf_fromport((struct netbuf *)buf);
+            fromaddr = netbuf_fromaddr((struct netbuf *)buf);
+
+            sock->conn->pcb.udp->remote_ip.u_addr.ip4.addr = fromaddr->u_addr.ip4.addr;
+            sock->conn->pcb.udp->remote_port = port;
+          }
+      }
+#endif
     }
 
     /* If we don't peek the incoming message... */
