@@ -844,6 +844,15 @@ dhcp_start(struct netif *netif)
   }
 #endif /* LWIP_DHCP_CHECK_LINK_UP */
 
+#ifdef ESP_DHCP
+  // Try to restore last valid ip address obtained from DHCP server.
+  // If no valid ip is available, run dhcp_discover instead.
+  if(LWIP_DHCP_IP_ADDR_RESTORE()) {
+    dhcp_set_state(dhcp, DHCP_STATE_BOUND);
+    dhcp_network_changed(netif);
+    return ERR_OK;
+  }
+#endif
 
   /* (re)start the DHCP negotiation */
   result = dhcp_discover(netif);
@@ -1234,6 +1243,10 @@ dhcp_bind(struct netif *netif)
   /* interface is used by routing now that an address is set */
 
  /* Espressif add start. */
+#ifdef ESP_DHCP
+  LWIP_DHCP_IP_ADDR_STORE();
+#endif
+
   if (dhcp->cb != NULL) {
 #ifdef ESP_DHCP
       dhcp->cb(netif);
