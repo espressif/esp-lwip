@@ -53,6 +53,7 @@
 #include "lwip/dhcp.h"
 #include "lwip/autoip.h"
 #include "netif/ethernet.h"
+#include "lwip/netif.h"
 
 #include <string.h>
 
@@ -137,6 +138,21 @@ static err_t etharp_raw(struct netif *netif,
                         const struct eth_addr *hwsrc_addr, const ip4_addr_t *ipsrc_addr,
                         const struct eth_addr *hwdst_addr, const ip4_addr_t *ipdst_addr,
                         const u16_t opcode);
+
+#if ESP_GRATUITOUS_ARP
+void garp_tmr(void)
+{
+  struct netif* garp_netif = NULL;
+
+  for (garp_netif = netif_list; garp_netif != NULL; garp_netif = garp_netif->next) {
+    if (netif_is_up(garp_netif) && netif_is_link_up(garp_netif) && !ip4_addr_isany_val(*netif_ip4_addr(garp_netif))) {
+      if ((garp_netif->flags & NETIF_FLAG_ETHARP) && (garp_netif->flags & NETIF_FLAG_GARP)) {
+        etharp_gratuitous(garp_netif);
+      }
+    }
+  }
+}
+#endif
 
 #if ARP_QUEUEING
 /**
