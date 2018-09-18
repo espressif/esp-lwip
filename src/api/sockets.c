@@ -277,16 +277,6 @@ do{\
   }\
 }while(0)
 
-#if ESP_LWIP
-#define LWIP_SET_CLOSE_FLAG(_flag) \
-do{\
-  LWIP_SOCK_LOCK(__sock);\
-  LWIP_DEBUGF(ESP_THREAD_SAFE_DEBUG, ("mark sock closing\n"));\
-  __sock->state = _flag;\
-  LWIP_SOCK_UNLOCK(__sock);\
-}while(0)
-
-#else
 #define LWIP_SET_CLOSE_FLAG() \
 do{\
   LWIP_SOCK_LOCK(__sock);\
@@ -294,7 +284,6 @@ do{\
   __sock->state = LWIP_SOCK_CLOSING;\
   LWIP_SOCK_UNLOCK(__sock);\
 }while(0)
-#endif
 
 #define LWIP_API_LOCK() \
   struct lwip_sock *__sock;\
@@ -3546,17 +3535,8 @@ int
 lwip_close_r(int s)
 {
   LWIP_API_LOCK();
-#if ESP_LWIP
-  LWIP_SET_CLOSE_FLAG(LWIP_SOCK_CLOSING);
-#else
   LWIP_SET_CLOSE_FLAG();
-#endif
   __ret = lwip_close(s);
-#if ESP_LWIP
-  if (EWOULDBLOCK == __sock->err) {
-    LWIP_SET_CLOSE_FLAG(LWIP_SOCK_OPEN);
-  }
-#endif
   LWIP_API_UNLOCK();
 }
 
