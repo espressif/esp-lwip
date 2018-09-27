@@ -1052,7 +1052,6 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
     /* Closing done (succeeded, non-memory error, nonblocking error or timeout) */
     sys_sem_t* op_completed_sem = LWIP_API_MSG_SEM(conn->current_msg);
     conn->current_msg->err = err;
-    conn->current_msg = NULL;
     conn->state = NETCONN_NONE;
     if (err == ERR_OK) {
       if (close) {
@@ -1077,6 +1076,7 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
       /* wake up the application task */
 #if ESP_LWIP
       if (sig_close) {
+        conn->current_msg = NULL;
         sys_sem_signal(op_completed_sem);
       }
 #else
