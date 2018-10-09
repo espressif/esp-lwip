@@ -243,7 +243,7 @@ autoip_bind(struct netif *netif)
   /* interface is used by routing now that an address is set */
 
 #if ESP_LWIP
-  struct dhcp *dhcp = netif->dhcp;
+  struct dhcp *dhcp = netif_dhcp_data(netif);
   if (dhcp->cb != NULL) {
     dhcp->cb(netif);
   }
