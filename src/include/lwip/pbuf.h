@@ -40,6 +40,9 @@
 
 #include "lwip/opt.h"
 #include "lwip/err.h"
+#if ESP_LWIP
+#include "lwip/netif.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
