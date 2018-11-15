@@ -83,6 +83,7 @@ pppapi_set_default(ppp_pcb *pcb)
 }
 
 #if ESP_LWIP
+#if PPP_AUTH_SUPPORT
 /**
  * Call ppp_set_auth() inside the tcpip_thread context.
  */
@@ -110,8 +111,8 @@ pppapi_set_auth(ppp_pcb *pcb, u8_t authtype, const char *user, const char *passw
   msg.msg.msg.setauth.passwd = passwd;
   tcpip_api_call(pppapi_do_ppp_set_auth, &msg.call);
 }
-
-#endif
+#endif /* PPP_AUTH_SUPPORT */
+#endif /* ESP_LWIP */
 
 #if PPP_NOTIFY_PHASE
 /**
