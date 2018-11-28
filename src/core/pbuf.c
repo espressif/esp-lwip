@@ -123,6 +123,9 @@ void eth_rx_irq()
 #if LWIP_CHECKSUM_ON_COPY
 #include "lwip/inet_chksum.h"
 #endif
+#if ESP_LWIP
+#include "lwip/netif.h"
+#endif
 
 #include <string.h>
 
