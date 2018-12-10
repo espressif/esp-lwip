@@ -1050,6 +1050,10 @@ dhcp_discover(struct netif *netif)
 
     dhcp_option(dhcp, DHCP_OPTION_MAX_MSG_SIZE, DHCP_OPTION_MAX_MSG_SIZE_LEN);
     dhcp_option_short(dhcp, DHCP_MAX_MSG_LEN(netif));
+    
+#if LWIP_NETIF_HOSTNAME
+    dhcp_option_hostname(dhcp, netif);
+#endif /* LWIP NETIF HOSTNAME */
 
     dhcp_option(dhcp, DHCP_OPTION_PARAMETER_REQUEST_LIST, LWIP_ARRAYSIZE(dhcp_discover_request_options));
     for (i = 0; i < LWIP_ARRAYSIZE(dhcp_discover_request_options); i++) {
