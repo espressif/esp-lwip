@@ -19,6 +19,7 @@ limitations under the License.
 /* esp-lwip branch src and tests compilable */
 #define SNTP_SERVER_DNS                 0
 #define LWIP_HAVE_LOOPIF                1
+#define LWIP_NETIF_HOSTNAME             1
 
 /* ESP specific cofiguration */
 #define ESP_LWIP                                1

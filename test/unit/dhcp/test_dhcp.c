@@ -186,6 +186,10 @@ static err_t testif_init(struct netif *netif)
   netif->hwaddr[4] = 0xD0;
   netif->hwaddr[5] = 0x0D;
 
+#if LWIP_NETIF_HOSTNAME
+  netif->hostname = "espressif";
+#endif
+
   return ERR_OK;
 }
 
@@ -269,6 +273,10 @@ static err_t lwip_tx_func(struct netif *netif, struct pbuf *p)
         const u8_t ipproto[] = { 0x08, 0x00 };
         const u8_t bootp_start[] = { 0x01, 0x01, 0x06, 0x00}; /* bootp request, eth, hwaddr len 6, 0 hops */
         const u8_t ipaddrs[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+#if LWIP_NETIF_HOSTNAME
+        // check if hostname option is added to dhcp discover and request
+        const u8_t hostname_opt[] = { 0x0c, 0x09, 0x65, 0x73, 0x70, 0x72, 0x65, 0x73, 0x73, 0x69, 0x66 };
+#endif
 
         check_pkt(p, 0, broadcast, 6); /* eth level dest: broadcast */
         check_pkt(p, 6, netif->hwaddr, 6); /* eth level src: unit mac */
@@ -287,12 +295,18 @@ static err_t lwip_tx_func(struct netif *netif, struct pbuf *p)
         if (txpacket == 1) {
           u8_t dhcp_discover_opt[] = { 0x35, 0x01, 0x01 };
           check_pkt_fuzzy(p, 282, dhcp_discover_opt, sizeof(dhcp_discover_opt));
+#if LWIP_NETIF_HOSTNAME
+          check_pkt_fuzzy(p, 282, hostname_opt, sizeof(hostname_opt));
+#endif
         } else if (txpacket == 2) {
           u8_t dhcp_request_opt[] = { 0x35, 0x01, 0x03 };
           u8_t requested_ipaddr[] = { 0x32, 0x04, 0xc3, 0xaa, 0xbd, 0xc8 }; /* Ask for offered IP */
 
           check_pkt_fuzzy(p, 282, dhcp_request_opt, sizeof(dhcp_request_opt));
           check_pkt_fuzzy(p, 282, requested_ipaddr, sizeof(requested_ipaddr));
+#if LWIP_NETIF_HOSTNAME
+          check_pkt_fuzzy(p, 282, hostname_opt, sizeof(hostname_opt));
+#endif
         }
         break;
       }
