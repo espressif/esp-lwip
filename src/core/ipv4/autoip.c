@@ -361,6 +361,8 @@ autoip_stop(struct netif *netif)
     if (ip4_addr_islinklocal(netif_ip4_addr(netif))) {
       netif_set_addr(netif, IP4_ADDR_ANY4, IP4_ADDR_ANY4, IP4_ADDR_ANY4);
     }
+    mem_free(autoip);
+    netif_set_client_data(netif, LWIP_NETIF_CLIENT_DATA_INDEX_AUTOIP, NULL);
   }
   return ERR_OK;
 }
