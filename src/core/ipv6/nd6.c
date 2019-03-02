@@ -562,8 +562,13 @@ nd6_input(struct pbuf *p, struct netif *inp)
             /* TODO implement DNS removal in dns.c */
             u8_t s;
             for (s = 0; s < DNS_MAX_SERVERS; s++) {
+#ifdef ESP_LWIP
+              ip_addr_t addr = dns_getserver(s);
+              if(ip_addr_cmp(&addr, &rdnss_address)) {
+#else
               const ip_addr_t *addr = dns_getserver(s);
               if(ip_addr_cmp(addr, &rdnss_address)) {
+#endif
                 dns_setserver(s, NULL);
               }
             }
