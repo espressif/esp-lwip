@@ -1393,6 +1393,10 @@ dhcp_reboot(struct netif *netif)
       dhcp_option_byte(dhcp, dhcp_discover_request_options[i]);
     }
 
+#if LWIP_NETIF_HOSTNAME
+    dhcp_option_hostname(dhcp, netif);
+#endif /* LWIP_NETIF_HOSTNAME */
+
     dhcp_option_trailer(dhcp);
 
     pbuf_realloc(dhcp->p_out, sizeof(struct dhcp_msg) - DHCP_OPTIONS_LEN + dhcp->options_out_len);
