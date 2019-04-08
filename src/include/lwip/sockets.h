@@ -40,7 +40,7 @@
 #define LWIP_HDR_SOCKETS_H
 
 #include "lwip/opt.h"
-
+#include "sys/poll.h"
 #if LWIP_SOCKET /* don't build if not configured for use in lwipopts.h */
 
 #include "lwip/ip_addr.h"
@@ -503,6 +503,7 @@ typedef struct fd_set
 #define POLLWRNORM 0x80
 #define POLLWRBAND 0x100
 #define POLLHUP    0x200
+#ifdef NO_POLLFD
 typedef unsigned int nfds_t;
 struct pollfd
 {
@@ -510,6 +511,7 @@ struct pollfd
   short events;
   short revents;
 };
+#endif/* NO_POLLFD*/
 #endif
 
 /** LWIP_TIMEVAL_PRIVATE: if you want to use the struct timeval provided

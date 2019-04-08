@@ -1,0 +1,32 @@
+stages:
+  - host_test
+image: ${CI_DOCKER_REGISTRY}/esp32-ci-env
+
+variables:
+# tag in lwip-contrib repo, which supports our esp-lwip branch (and it's cherry-picked commits from release branches)
+  LWIP_CONTRIB_TAG: STABLE-2_1_0_RELEASE
+# test timeout is seconds
+  TEST_TIMEOUT: 200
+
+before_script:
+  # Use CI Tools
+  - curl -sSL ${CIT_LOADER_URL} | sh
+  - source citools/import_functions
+
+run_lwip_unittests:
+  stage: host_test
+  tags:
+    - host_test
+  dependencies: []
+  script:
+    # have to clone lwip-contrib repo, as it contains unit test infrastructure
+    - cit_add_ssh_key "${GITLAB_KEY}" "$(cit_parse_url_host ${LWIP_CONTRIB_MIRROR})" "$(cit_parse_url_port ${LWIP_CONTRIB_MIRROR})"
+    - git clone "${LWIP_CONTRIB_MIRROR}" lwip-contrib && cd lwip-contrib && git checkout tags/${LWIP_CONTRIB_TAG}
+    - cd ports/unix/check/
+    # updating environment
+    - export LWIPDIR=../../../../src && export CK_DEFAULT_TIMEOUT=${TEST_TIMEOUT}
+    - export TESTFILES=`find $LWIPDIR/../test/unit -name '*.c' | tr '\n' ' '`
+    - export CFLAGS=-I$LWIPDIR/../test/unit/esp
+    # build and run tests
+    - make "TESTFILES=$TESTFILES" check
+
