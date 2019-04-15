@@ -94,7 +94,7 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
 #if LWIP_AUTOIP
   {AUTOIP_TMR_INTERVAL, HANDLER(autoip_tmr)},
 #endif /* LWIP_AUTOIP */
-#if LWIP_IGMP
+#if LWIP_IGMP && !ESP_LWIP_IGMP_TIMERS_ONDEMAND
   {IGMP_TMR_INTERVAL, HANDLER(igmp_tmr)},
 #endif /* LWIP_IGMP */
 #endif /* LWIP_IPV4 */
@@ -106,7 +106,7 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
 #if LWIP_IPV6_REASS
   {IP6_REASS_TMR_INTERVAL, HANDLER(ip6_reass_tmr)},
 #endif /* LWIP_IPV6_REASS */
-#if LWIP_IPV6_MLD
+#if LWIP_IPV6_MLD && !ESP_LWIP_MLD6_TIMERS_ONDEMAND
   {MLD6_TMR_INTERVAL, HANDLER(mld6_tmr)},
 #endif /* LWIP_IPV6_MLD */
 #if LWIP_IPV6_DHCP6

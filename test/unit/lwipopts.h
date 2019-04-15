@@ -151,10 +151,14 @@ u32_t esp_random(void);
 #define UDP_DEBUG                       LWIP_DBG_ON
 #define TCP_DEBUG                       LWIP_DBG_ON
 #endif /* ESP_TEST_DEBUG */
+#define ESP_LWIP_IGMP_TIMERS_ONDEMAND           1
+#define ESP_LWIP_MLD6_TIMERS_ONDEMAND           1
+
 #else
-#define ESP_LWIP                        0
-#define ESP_DHCP 0
-#define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 1
+#define ESP_LWIP                                0
+#define ESP_LWIP_IGMP_TIMERS_ONDEMAND           0
+#define ESP_LWIP_MLD6_TIMERS_ONDEMAND           0
+
 #endif /* ESP_LWIP */
 
 #endif /* LWIP_HDR_LWIPOPTS_H */
