@@ -1308,3 +1308,34 @@ netif_null_output_ip6(struct netif *netif, struct pbuf *p, const ip6_addr_t *ipa
   return ERR_IF;
 }
 #endif /* LWIP_IPV6 */
+
+#ifdef LWIP_HOOK_UNKNOWN_ETH_PROTOCOL_CALLBACK
+#include <esp_log.h>
+
+err_t eth_unknow_type_callback(struct pbuf* pbuf, struct netif* netif){
+	ESP_LOGE("LWIP","netif num: %d name: %s", netif->num,netif->name);
+	//ESP_LOG_BUFFER_HEX("LWIP",pbuf,sizeof(pbuf));
+	ESP_LOGE("LWIP","netif: %p,netif->eth_unknow_type_callback: %p",netif,netif->eth_unknow_type_callback);
+	if(netif->eth_unknow_type_callback_registered){
+		if(netif->eth_unknow_type_callback){
+			return netif->eth_unknow_type_callback(pbuf,netif);
+		}
+		return ERR_OK;
+	}
+	ESP_LOGE("LWIP","%s","YZX netif->eth_unknow_type_callback is NULL");
+	return ERR_OK;
+}
+
+err_t register_eth_unknow_type_callback(u8_t num,netif_input_fn p){
+	int length = sizeof(netif_list);
+	ESP_LOGE("LWIP","sizeof(netif_list): %d",length);
+	for(int i = 0 ; i < length ; i++){
+		if(netif_list[i].num == num){
+			netif_list[i].eth_unknow_type_callback_registered = true;
+			netif_list[i].eth_unknow_type_callback = p;
+			return ERR_OK;
+		}
+	}
+	return ERR_OK;
+}
+#endif

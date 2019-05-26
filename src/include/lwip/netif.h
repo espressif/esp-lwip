@@ -363,6 +363,11 @@ struct netif {
   void (*l2_buffer_free_notify)(void *user_buf); /* Allows LWIP to notify driver when a L2-supplied pbuf can be freed */
   ip_addr_t last_ip_addr; /* Store last non-zero ip address */
 #endif
+
+#ifdef LWIP_HOOK_UNKNOWN_ETH_PROTOCOL_CALLBACK
+netif_input_fn eth_unknow_type_callback;
+bool eth_unknow_type_callback_registered;
+#endif
 };
 
 #if LWIP_CHECKSUM_CTRL_PER_NETIF
@@ -500,6 +505,11 @@ err_t netif_add_ip6_address(struct netif *netif, const ip6_addr_t *ip6addr, s8_t
 #else /* LWIP_NETIF_HWADDRHINT */
 #define NETIF_SET_HWADDRHINT(netif, hint)
 #endif /* LWIP_NETIF_HWADDRHINT */
+
+#ifdef LWIP_HOOK_UNKNOWN_ETH_PROTOCOL_CALLBACK
+err_t eth_unknow_type_callback(struct pbuf* pbuf, struct netif* netif);
+err_t register_eth_unknow_type_callback(u8_t num,netif_input_fn p);
+#endif
 
 #ifdef __cplusplus
 }
