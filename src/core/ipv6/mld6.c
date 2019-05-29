@@ -316,9 +316,10 @@ mld6_joingroup(const ip6_addr_t *srcaddr, const ip6_addr_t *groupaddr)
 {
   err_t         err = ERR_VAL; /* no matching interface */
   struct netif *netif;
-
   LWIP_ASSERT_CORE_LOCKED();
-
+#if ESP_IPV6
+  LWIP_ERROR("mld6_joingroup: attempt to join non-multicast address", ip6_addr_ismulticast(groupaddr), return ERR_VAL;);
+#endif
   /* loop through netif's */
   NETIF_FOREACH(netif) {
     /* Should we join this interface ? */
