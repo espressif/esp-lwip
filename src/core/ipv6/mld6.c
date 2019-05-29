@@ -350,6 +350,9 @@ mld6_joingroup_netif(struct netif *netif, const ip6_addr_t *groupaddr)
 #if LWIP_IPV6_SCOPES
   ip6_addr_t ip6addr;
 
+  /* make sure it is multicast address */
+  LWIP_ERROR("mld6_joingroup: attempt to join non-multicast address", ip6_addr_ismulticast(groupaddr), return ERR_VAL;);
+
   /* If the address has a particular scope but no zone set, use the netif to
    * set one now. Within the mld6 module, all addresses are properly zoned. */
   if (ip6_addr_lacks_zone(groupaddr, IP6_MULTICAST)) {
