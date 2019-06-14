@@ -45,6 +45,7 @@ push_master_to_github:
   stage: deploy
   only:
     - 2.0.3-esp
+    - /^release\/v/
   when: on_success
   variables:
     GIT_STRATEGY: clone
