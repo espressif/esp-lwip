@@ -314,12 +314,25 @@ const ip_addr_t dns_mquery_v6group = DNS_MQUERY_IPV6_GROUP_INIT;
 void
 dns_init(void)
 {
+#if ESP_DNS
+#ifdef FALLBACK_DNS_SERVER_ADDRESS
+  /* initialize fallback dns DNS server address */
+  ip_addr_t dnsserver;
+  FALLBACK_DNS_SERVER_ADDRESS(&dnsserver);
+  dnsserver.type = IPADDR_TYPE_V4;
+  dns_setserver(DNS_FALLBACK_SERVER_INDEX, &dnsserver);
+#endif /* FALLBACK_DNS_SERVER_ADDRESS */
+
+#else
+
+
 #ifdef DNS_SERVER_ADDRESS
   /* initialize default DNS server address */
   ip_addr_t dnsserver;
   DNS_SERVER_ADDRESS(&dnsserver);
   dns_setserver(0, &dnsserver);
 #endif /* DNS_SERVER_ADDRESS */
+#endif
 
   LWIP_ASSERT("sanity check SIZEOF_DNS_QUERY",
               sizeof(struct dns_query) == SIZEOF_DNS_QUERY);
@@ -1059,7 +1072,11 @@ dns_check_entry(u8_t i)
       entry->server_idx = 0;
       entry->tmr = 1;
       entry->retries = 0;
-
+#if ESP_DNS
+      while((entry->server_idx < DNS_MAX_SERVERS) && ip_addr_isany_val(dns_servers[entry->server_idx])) {
+        entry->server_idx++;
+      }
+#endif
       /* send DNS packet for this entry */
       err = dns_send(i);
       if (err != ERR_OK) {
@@ -1070,6 +1087,12 @@ dns_check_entry(u8_t i)
     case DNS_STATE_ASKING:
       if (--entry->tmr == 0) {
         if (++entry->retries == DNS_MAX_RETRIES) {
+#if ESP_DNS
+          /* skip DNS servers with zero address */
+        while ((entry->server_idx + 1 < DNS_MAX_SERVERS) && ip_addr_isany_val(dns_servers[entry->server_idx + 1])) {
+            entry->server_idx++;
+          }
+#endif
           if (dns_backupserver_available(entry)
 #if LWIP_DNS_SUPPORT_MDNS_QUERIES
               && !entry->is_mdns
@@ -1529,6 +1552,19 @@ dns_gethostbyname(const char *hostname, ip_addr_t *addr, dns_found_callback foun
   return dns_gethostbyname_addrtype(hostname, addr, found, callback_arg, LWIP_DNS_ADDRTYPE_DEFAULT);
 }
 
+#if ESP_DNS
+static bool dns_server_is_set (void)
+{
+  int i = 0;
+  for (i = 0;i < DNS_MAX_SERVERS; i++) {
+    if (!ip_addr_isany_val(dns_servers[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+#endif
+
 /**
  * @ingroup dns
  * Like dns_gethostbyname, but returned address type can be controlled:
@@ -1618,7 +1654,11 @@ dns_gethostbyname_addrtype(const char *hostname, ip_addr_t *addr, dns_found_call
 #endif /* LWIP_DNS_SUPPORT_MDNS_QUERIES */
   {
     /* prevent calling found callback if no server is set, return error instead */
+#if ESP_DNS
+    if (dns_server_is_set() == false) {
+#else
     if (ip_addr_isany_val(dns_servers[0])) {
+#endif
       return ERR_VAL;
     }
   }
