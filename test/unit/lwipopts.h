@@ -95,5 +95,6 @@
 #define ESP_AUTO_IP                             1
 #define ESP_IPV6                                1
 #define ESP_SOCKET                              0
+#define ESP_PPP                                 1
 
 #endif /* LWIP_HDR_LWIPOPTS_H */

@@ -82,6 +82,36 @@ pppapi_set_default(ppp_pcb *pcb)
   return err;
 }
 
+#if ESP_PPP
+/**
+ * Call ppp_set_auth() inside the tcpip_thread context.
+ */
+static err_t
+pppapi_do_ppp_set_auth(struct tcpip_api_call_data *m)
+{
+  struct pppapi_msg *msg = (struct pppapi_msg *)m;
+
+  ppp_set_auth(msg->msg.ppp, msg->msg.msg.setauth.authtype,
+               msg->msg.msg.setauth.user, msg->msg.msg.setauth.passwd);
+  return ERR_OK;
+}
+
+/**
+ * Call ppp_set_auth() in a thread-safe way by running that function inside the
+ * tcpip_thread context.
+ */
+void
+pppapi_set_auth(ppp_pcb *pcb, u8_t authtype, const char *user, const char *passwd)
+{
+  struct pppapi_msg msg;
+  msg.msg.ppp = pcb;
+  msg.msg.msg.setauth.authtype = authtype;
+  msg.msg.msg.setauth.user = user;
+  msg.msg.msg.setauth.passwd = passwd;
+  tcpip_api_call(pppapi_do_ppp_set_auth, &msg.call);
+}
+
+#endif
 
 #if PPP_NOTIFY_PHASE
 /**
