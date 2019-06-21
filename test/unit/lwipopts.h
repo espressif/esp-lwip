@@ -84,6 +84,7 @@
 #define LWIP_MEM_ILLEGAL_FREE(msg)      /* to nothing */
 
 #ifdef ESP_LWIP
+#define ESP_DNS                          1
 #define LWIP_DHCP_ENABLE_VENDOR_SPEC_IDS 1
 #define LWIP_DHCP_ENABLE_CLIENT_ID 1
 #define LWIP_DHCP_ENABLE_MTU_UPDATE 1
@@ -156,6 +157,7 @@ u32_t esp_random(void);
 
 #else
 #define ESP_LWIP                                0
+#define ESP_DNS                                 0
 #define ESP_LWIP_IGMP_TIMERS_ONDEMAND           0
 #define ESP_LWIP_MLD6_TIMERS_ONDEMAND           0
 
