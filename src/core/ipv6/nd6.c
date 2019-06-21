@@ -944,6 +944,22 @@ lenerr_drop_free_return:
   pbuf_free(p);
 }
 
+#ifdef ESP_IPV6
+
+/** Set callback for ipv6 addr status changed .
+ *
+ * @param netif the netif from which to remove the struct dhcp
+ * @param cb    callback for dhcp
+ */
+void nd6_set_cb(struct netif *netif, void (*cb)(struct netif *netif, u8_t ip_index))
+{
+  LWIP_ASSERT("netif != NULL", netif != NULL);
+
+  if (netif != NULL && netif_is_up(netif)) {
+      netif->ipv6_addr_cb = cb;
+  }
+}
+#endif
 
 /**
  * Periodic timer for Neighbor discovery functions:
@@ -1125,7 +1141,21 @@ nd6_tmr(void)
           }
 #endif /* LWIP_IPV6_ADDRESS_LIFETIMES */
           netif_ip6_addr_set_state(netif, i, addr_state);
+#ifdef ESP_IPV6
+          if (netif->ipv6_addr_cb != NULL) {
+              netif->ipv6_addr_cb(netif, i);
+          }
+#endif
         } else if (netif_is_up(netif) && netif_is_link_up(netif)) {
+#if ESP_IPV6
+#if LWIP_IPV6_MLD
+          if ((netif_ip6_addr_state(netif, i) & IP6_ADDR_TENTATIVE_COUNT_MASK) == 0) {
+            /* Join solicited node multicast group. */
+            ip6_addr_set_solicitednode(&multicast_address, netif_ip6_addr(netif, i)->addr[3]);
+            mld6_joingroup(netif_ip6_addr(netif, i), &multicast_address);
+          }
+#endif /* LWIP_IPV6_MLD */
+#endif
           /* tentative: set next state by increasing by one */
           netif_ip6_addr_set_state(netif, i, addr_state + 1);
           /* Send a NS for this address. Use the unspecified address as source

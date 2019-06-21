@@ -287,6 +287,9 @@ struct netif {
   u32_t ip6_addr_valid_life[LWIP_IPV6_NUM_ADDRESSES];
   u32_t ip6_addr_pref_life[LWIP_IPV6_NUM_ADDRESSES];
 #endif /* LWIP_IPV6_ADDRESS_LIFETIMES */
+#if ESP_LWIP
+  void (*ipv6_addr_cb)(struct netif* netif, u8_t ip_idex); /* callback for ipv6 addr states changed */
+#endif
 #endif /* LWIP_IPV6 */
   /** This function is called by the network device driver
    *  to pass a packet up the TCP/IP stack. */

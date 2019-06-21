@@ -93,5 +93,6 @@
 #define ESP_PBUF                                1
 #define ESP_IP4_ROUTE                           1
 #define ESP_AUTO_IP                             1
+#define ESP_IPV6                                1
 
 #endif /* LWIP_HDR_LWIPOPTS_H */
