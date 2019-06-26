@@ -82,4 +82,14 @@
 /* Check lwip_stats.mem.illegal instead of asserting */
 #define LWIP_MEM_ILLEGAL_FREE(msg)      /* to nothing */
 
+#define SNTP_SERVER_DNS                 0
+#define LWIP_COMPAT_SOCKET_INET         0
+
+/* ESP specific cofiguration */
+#define ESP_LWIP                                1
+#define ESP_DHCP                                1 
+#define ESP_DHCP_TIMER                          1 
+#define ESP_DHCPS_TIMER                         0
+#define ESP_STATS_DROP                          0
+
 #endif /* LWIP_HDR_LWIPOPTS_H */
