@@ -92,5 +92,7 @@
 #define ESP_DHCPS_TIMER                         0
 #define ESP_STATS_DROP                          0
 #define ESP_PBUF                                1
+#define ESP_IP4_ROUTE                           1
+
 
 #endif /* LWIP_HDR_LWIPOPTS_H */
