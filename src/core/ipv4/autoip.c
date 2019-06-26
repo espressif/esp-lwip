@@ -61,13 +61,13 @@
 #if LWIP_IPV4 && LWIP_AUTOIP /* don't build if not configured for use in lwipopts.h */
 
 #include "lwip/mem.h"
-/* #include "lwip/udp.h" */
+#include "lwip/udp.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
 #include "lwip/autoip.h"
 #include "lwip/etharp.h"
 #include "lwip/prot/autoip.h"
-
+#include "lwip/dhcp.h"
 #include <string.h>
 
 /** Pseudo random macro based on netif informations.
@@ -241,6 +241,13 @@ autoip_bind(struct netif *netif)
 
   netif_set_addr(netif, &autoip->llipaddr, &sn_mask, &gw_addr);
   /* interface is used by routing now that an address is set */
+
+#if ESP_AUTO_IP
+  struct dhcp *dhcp = netif_dhcp_data(netif);
+  if (dhcp->cb != NULL) {
+    dhcp->cb(netif);
+  }
+#endif
 
   return ERR_OK;
 }
