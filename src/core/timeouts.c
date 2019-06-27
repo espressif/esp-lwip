@@ -69,6 +69,10 @@
 
 #define LWIP_MAX_TIMEOUT  0x7fffffff
 
+#if ESP_DHCPS_TIMER
+extern void dhcps_coarse_tmr(void);
+#endif 
+
 /* Check if timer's expiry time is greater than time and care about u32_t wraparounds */
 #define TIME_LESS_THAN(t, compare_to) ( (((u32_t)((t)-(compare_to))) > LWIP_MAX_TIMEOUT) ? 1 : 0 )
 
@@ -91,6 +95,9 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
   {DHCP_COARSE_TIMER_MSECS, HANDLER(dhcp_coarse_tmr)},
   {DHCP_FINE_TIMER_MSECS, HANDLER(dhcp_fine_tmr)},
 #endif /* LWIP_DHCP */
+#if ESP_DHCPS_TIMER
+  {DHCP_COARSE_TIMER_MSECS, HANDLER(dhcps_coarse_tmr)},
+#endif
 #if LWIP_AUTOIP
   {AUTOIP_TMR_INTERVAL, HANDLER(autoip_tmr)},
 #endif /* LWIP_AUTOIP */

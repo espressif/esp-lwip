@@ -50,7 +50,11 @@ extern "C" {
 #endif
 
 /** period (in seconds) of the application calling dhcp_coarse_tmr() */
-#define DHCP_COARSE_TIMER_SECS  60
+#if ESP_DHCP
+#define DHCP_COARSE_TIMER_SECS 1
+#else
+#define DHCP_COARSE_TIMER_SECS 60
+#endif
 /** period (in milliseconds) of the application calling dhcp_coarse_tmr() */
 #define DHCP_COARSE_TIMER_MSECS (DHCP_COARSE_TIMER_SECS * 1000UL)
 /** period (in milliseconds) of the application calling dhcp_fine_tmr() */
@@ -98,6 +102,14 @@ struct dhcp
   ip4_addr_t offered_si_addr;
   char boot_file_name[DHCP_BOOT_FILE_LEN];
 #endif /* LWIP_DHCP_BOOTPFILE */
+
+  /* Espressif add start. */
+#ifdef ESP_DHCP
+  void (*cb)(struct netif*); /* callback for dhcp, add a parameter to show dhcp status if needed */
+#else
+  void (*cb)(void); /* callback for dhcp, add a parameter to show dhcp status if needed */
+#endif
+  /* Espressif add end. */
 };
 
 
@@ -112,6 +124,16 @@ void dhcp_stop(struct netif *netif);
 void dhcp_release_and_stop(struct netif *netif);
 void dhcp_inform(struct netif *netif);
 void dhcp_network_changed(struct netif *netif);
+
+/* Espressif add start. */
+/** set callback for DHCP */
+#ifdef ESP_DHCP
+void dhcp_set_cb(struct netif *netif, void (*cb)(struct netif*));
+#else
+void dhcp_set_cb(struct netif *netif, void (*cb)(void));
+#endif
+/* Espressif add end. */
+
 #if DHCP_DOES_ARP_CHECK
 void dhcp_arp_reply(struct netif *netif, const ip4_addr_t *addr);
 #endif

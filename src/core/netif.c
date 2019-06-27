@@ -776,6 +776,12 @@ netif_remove(struct netif *netif)
     /* set netif down before removing (call callback function) */
     netif_set_down(netif);
   }
+#if ESP_DHCP
+#if LWIP_DHCP
+  /* netif not under DHCP control by default */
+  dhcp_cleanup(netif);
+#endif /* LWIP_DHCP */
+#endif
 
   mib2_remove_ip4(netif);
 

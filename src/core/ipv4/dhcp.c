@@ -285,6 +285,13 @@ dhcp_handle_nak(struct netif *netif)
   dhcp_set_state(dhcp, DHCP_STATE_BACKING_OFF);
   /* remove IP address from interface (must no longer be used, as per RFC2131) */
   netif_set_addr(netif, IP4_ADDR_ANY4, IP4_ADDR_ANY4, IP4_ADDR_ANY4);
+  if (dhcp->cb != NULL) {
+#ifdef ESP_DHCP
+    dhcp->cb(netif);
+#else
+    dhcp->cb();
+#endif
+  }
   /* We can immediately restart discovery */
   dhcp_discover(netif);
 }
@@ -558,7 +565,12 @@ dhcp_t1_timeout(struct netif *netif)
        DHCP_STATE_RENEWING, not DHCP_STATE_BOUND */
     dhcp_renew(netif);
     /* Calculate next timeout */
-    if (((dhcp->t2_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS)) {
+#if ESP_DHCP
+    if (((dhcp->t2_timeout - dhcp->lease_used) / 2)*DHCP_COARSE_TIMER_SECS >= 3)
+#else
+    if (((dhcp->t2_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS))
+#endif
+    {
       dhcp->t1_renew_time = (u16_t)((dhcp->t2_timeout - dhcp->lease_used) / 2);
     }
   }
@@ -584,7 +596,12 @@ dhcp_t2_timeout(struct netif *netif)
        DHCP_STATE_REBINDING, not DHCP_STATE_BOUND */
     dhcp_rebind(netif);
     /* Calculate next timeout */
-    if (((dhcp->t0_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS)) {
+#if ESP_DHCP
+    if (((dhcp->t0_timeout - dhcp->lease_used) / 2)*DHCP_COARSE_TIMER_SECS >= 3)
+#else
+    if (((dhcp->t0_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS))
+#endif
+     {
       dhcp->t2_rebind_time = (u16_t)((dhcp->t0_timeout - dhcp->lease_used) / 2);
     }
   }
@@ -725,6 +742,31 @@ void dhcp_cleanup(struct netif *netif)
   }
 }
 
+/* Espressif add start. */
+
+/** Set callback for dhcp, reserved parameter for future use.
+ *
+ * @param netif the netif from which to remove the struct dhcp
+ * @param cb    callback for dhcp
+ */
+#ifdef ESP_DHCP
+void dhcp_set_cb(struct netif *netif, void (*cb)(struct netif*))
+#else
+void dhcp_set_cb(struct netif *netif, void (*cb)(void))
+#endif
+{
+  struct dhcp *dhcp;
+  dhcp = netif_dhcp_data(netif);
+
+  LWIP_ASSERT("netif != NULL", netif != NULL);
+
+  if (dhcp != NULL) {
+    dhcp->cb = cb;
+  }
+}
+
+/* Espressif add end. */
+
 /**
  * @ingroup dhcp4
  * Start DHCP negotiation for a network interface.
@@ -794,6 +836,16 @@ dhcp_start(struct netif *netif)
     dhcp_set_state(dhcp, DHCP_STATE_INIT);
     return ERR_OK;
   }
+
+#ifdef ESP_DHCP
+  /*  Try to restore last valid ip address obtained from DHCP server.*/
+  /*  If no valid ip is available, run dhcp_discover instead.*/
+  if(LWIP_DHCP_IP_ADDR_RESTORE()) {
+    dhcp_set_state(dhcp, DHCP_STATE_BOUND);
+    dhcp_network_changed(netif);
+    return ERR_OK;
+  }
+#endif
 
   /* (re)start the DHCP negotiation */
   result = dhcp_discover(netif);
@@ -1029,7 +1081,14 @@ dhcp_discover(struct netif *netif)
     autoip_start(netif);
   }
 #endif /* LWIP_DHCP_AUTOIP_COOP */
-  msecs = (u16_t)((dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000);
+#if ESP_DHCP
+/* Since for embedded devices it's not that hard to miss a discover packet, so lower
+   * the discover retry backoff time from (2,4,8,16,32,60,60)s to (500m,1,2,4,8,15,15)s.
+   */
+  msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 250;
+#else
+  msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000;
+#endif
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_discover(): set request timeout %"U16_F" msecs\n", msecs));
   return result;
@@ -1055,6 +1114,47 @@ dhcp_bind(struct netif *netif)
   /* reset time used of lease */
   dhcp->lease_used = 0;
 
+#if ESP_DHCP
+  if (dhcp->offered_t0_lease != 0xffffffffUL) {
+     /* set renewal period timer */
+     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t0 renewal timer %"U32_F" secs\n", dhcp->offered_t0_lease));
+     timeout = dhcp->offered_t0_lease;
+     dhcp->t0_timeout = timeout;
+     if (dhcp->t0_timeout == 0) {
+       dhcp->t0_timeout = 120;
+     }
+     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t0_lease*1000));
+  }
+
+  /* temporary DHCP lease? */
+  if (dhcp->offered_t1_renew != 0xffffffffUL) {
+    /* set renewal period timer */
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t1 renewal timer %"U32_F" secs\n", dhcp->offered_t1_renew));
+    timeout = dhcp->offered_t1_renew;
+    dhcp->t1_timeout = timeout;
+    if (dhcp->t1_timeout == 0) {
+      dhcp->t1_timeout = dhcp->t0_timeout>>1;
+    }
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t1_renew*1000));
+    dhcp->t1_renew_time = dhcp->t1_timeout;
+  }
+  /* set renewal period timer */
+  if (dhcp->offered_t2_rebind != 0xffffffffUL) {
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t2 rebind timer %"U32_F" secs\n", dhcp->offered_t2_rebind));
+    timeout = dhcp->offered_t2_rebind;
+    dhcp->t2_timeout = timeout;
+    if (dhcp->t2_timeout == 0) {
+      dhcp->t2_timeout = (dhcp->t0_timeout>>3)*7;
+    }
+    LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t2_rebind*1000));
+    dhcp->t2_rebind_time = dhcp->t2_timeout;
+  }
+
+  /* If we have sub 1 minute lease, t2 and t1 will kick in at the same time. */
+  if ((dhcp->t1_timeout >= dhcp->t2_timeout) && (dhcp->t2_timeout > 0)) {
+    dhcp->t1_timeout = 0;
+  }
+#else
   if (dhcp->offered_t0_lease != 0xffffffffUL) {
     /* set renewal period timer */
     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t0 renewal timer %"U32_F" secs\n", dhcp->offered_t0_lease));
@@ -1103,6 +1203,7 @@ dhcp_bind(struct netif *netif)
   if ((dhcp->t1_timeout >= dhcp->t2_timeout) && (dhcp->t2_timeout > 0)) {
     dhcp->t1_timeout = 0;
   }
+  #endif
 
   if (dhcp->subnet_mask_given) {
     /* copy offered network mask */
@@ -1143,6 +1244,20 @@ dhcp_bind(struct netif *netif)
 
   netif_set_addr(netif, &dhcp->offered_ip_addr, &sn_mask, &gw_addr);
   /* interface is used by routing now that an address is set */
+
+ /* Espressif add start. */
+#ifdef ESP_DHCP
+  LWIP_DHCP_IP_ADDR_STORE();
+#endif
+
+ if (dhcp->cb != NULL) {
+#ifdef ESP_DHCP
+      dhcp->cb(netif);
+#else
+      dhcp->cb();
+#endif
+  }
+  /* Espressif add end. */
 }
 
 /**
@@ -1373,6 +1488,14 @@ dhcp_release_and_stop(struct netif *netif)
 
     /* remove IP address from interface (prevents routing from selecting this interface) */
     netif_set_addr(netif, IP4_ADDR_ANY4, IP4_ADDR_ANY4, IP4_ADDR_ANY4);
+
+   if (dhcp->cb != NULL) {
+#ifdef ESP_DHCP
+    dhcp->cb(netif);
+#else
+    dhcp->cb();
+#endif
+      }
   }
 
 #if LWIP_DHCP_AUTOIP_COOP

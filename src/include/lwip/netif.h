@@ -254,6 +254,11 @@ struct netif_hint {
 #define LWIP_NETIF_USE_HINTS              0
 #endif /* LWIP_NETIF_HWADDRHINT */
 
+#if ESP_DHCP
+/*add DHCP event processing by LiuHan*/
+typedef void (*dhcp_event_fn)(void);
+#endif
+
 /** Generic data structure used for all lwIP network interfaces.
  *  The following fields should be filled in by the initialization
  *  function for the device driver: hwaddr_len, hwaddr[], mtu, flags */
@@ -324,6 +329,12 @@ struct netif {
 #ifdef netif_get_client_data
   void* client_data[LWIP_NETIF_CLIENT_DATA_INDEX_MAX + LWIP_NUM_NETIF_CLIENT_DATA];
 #endif
+
+#if ESP_DHCP
+  struct udp_pcb *dhcps_pcb;	
+  dhcp_event_fn dhcp_event;
+#endif
+
 #if LWIP_NETIF_HOSTNAME
   /* the hostname for this netif, NULL is a valid value */
   const char*  hostname;

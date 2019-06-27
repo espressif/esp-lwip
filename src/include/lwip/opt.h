@@ -965,6 +965,18 @@
  * @}
  */
 
+#ifndef LWIP_DHCP_IP_ADDR_RESTORE
+#define LWIP_DHCP_IP_ADDR_RESTORE()       0
+#endif
+
+#ifndef LWIP_DHCP_IP_ADDR_STORE
+#define LWIP_DHCP_IP_ADDR_STORE()
+#endif
+
+#ifndef LWIP_DHCP_IP_ADDR_ERASE
+#define LWIP_DHCP_IP_ADDR_ERASE()
+#endif
+
 /*
    ------------------------------------
    ---------- AUTOIP options ----------
