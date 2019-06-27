@@ -83,9 +83,32 @@
 /* Check lwip_stats.mem.illegal instead of asserting */
 #define LWIP_MEM_ILLEGAL_FREE(msg)      /* to nothing */
 
+#ifdef ESP_LWIP
 /* Enable Espressif specific options */
-#define ESP_LWIP                        1
 
+/* DHCP options*/
+#define DHCP_DEFINE_CUSTOM_TIMEOUTS     1
+#define DHCP_COARSE_TIMER_SECS          (1)
+#define DHCP_NEXT_TIMEOUT_THRESHOLD     (3)
+#define DHCP_REQUEST_TIMEOUT_SEQUENCE(tries)   (( (tries) < 6 ? 1 << (tries) : 60) * 250)
+
+#include <stdint.h>
+static inline uint32_t timeout_from_offered(uint32_t lease, uint32_t min)
+{
+    uint32_t timeout = lease;
+    if (timeout == 0) {
+        timeout = min;
+    }
+    return timeout;
+}
+#define DHCP_CALC_TIMEOUT_FROM_OFFERED_T0_LEASE(dhcp)  \
+        timeout_from_offered((dhcp)->offered_t0_lease, 120)
+#define DHCP_CALC_TIMEOUT_FROM_OFFERED_T1_RENEW(dhcp)  \
+        timeout_from_offered((dhcp)->offered_t1_renew, (dhcp)->t0_timeout>>1 /* 50% */ )
+#define DHCP_CALC_TIMEOUT_FROM_OFFERED_T2_REBIND(dhcp) \
+        timeout_from_offered((dhcp)->offered_t2_rebind, ((dhcp)->t0_timeout/8)*7 /* 87.5% */ )
+
+/* NAPT options */
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
 #undef LWIP_RAND
@@ -93,6 +116,7 @@
 #include "lwip/arch.h"
 u32_t esp_random(void);
 #endif /* IP_NAPT */
+
 /* ESP debug options */
 #ifdef ESP_TEST_DEBUG
 #define NAPT_DEBUG                      LWIP_DBG_ON
@@ -100,5 +124,8 @@ u32_t esp_random(void);
 #define UDP_DEBUG                       LWIP_DBG_ON
 #define TCP_DEBUG                       LWIP_DBG_ON
 #endif /* ESP_TEST_DEBUG */
+#else
+#define ESP_LWIP                        0
+#endif /* ESP_LWIP */
 
 #endif /* LWIP_HDR_LWIPOPTS_H */

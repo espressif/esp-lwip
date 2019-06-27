@@ -28,10 +28,13 @@ jobs:
         export LWIPDIR=../../../../src && cd ${CONTRIB}/ports/unix/check
         make -j 4 check
         make clean
-        export EXTRA_CFLAGS="-DIP_FORWARD=1" && export CC="cc $EXTRA_CFLAGS"
+        export EXTRA_CFLAGS="-DESP_LWIP=1" && export CC="${CC} $EXTRA_CFLAGS"
         make -j 4 check
         make clean
-        export EXTRA_CFLAGS="-DIP_FORWARD=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="cc $EXTRA_CFLAGS"
+        export EXTRA_CFLAGS="-DESP_LWIP=1 -DIP_FORWARD=1" && export CC="${CC} $EXTRA_CFLAGS"
+        make -j 4 check
+        make clean
+        export EXTRA_CFLAGS="-DESP_LWIP=1 -DIP_FORWARD=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="${CC} $EXTRA_CFLAGS"
         make -j 4 check      
 
     - name: Run cmake

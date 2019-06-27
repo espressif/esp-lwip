@@ -5,12 +5,10 @@ stages:
 image: ${CI_DOCKER_REGISTRY}/esp-env-v5.0:2
 
 variables:
-# tag in lwip-contrib repo, which supports our esp-lwip branch (and it's cherry-picked commits from release branches)
   LWIP_CONTRIB_TAG: STABLE-2_1_0_RELEASE
-# test timeout is seconds
-  TEST_TIMEOUT: 200
   CONTRIB: contrib-2.1.0
   CMAKE_SH: cmake-3.22.3-linux-x86_64.sh
+  CC: cc
 
 before_script:
   # Use CI Tools
@@ -40,19 +38,23 @@ run_unittests:
   script:
     - *get_contrib
     - export LWIPDIR=../../../../src && cd ${CONTRIB}/ports/unix/check
-    # build and run default lwip tests
+    # build and run default lwip tests (ESP_LWIP=0!)
+    - make -j 4 check
+    # retest with ESP_LWIP patches
+    - make clean
+    - export EXTRA_CFLAGS="-DESP_LWIP=1" && export CC="${CC} $EXTRA_CFLAGS"
     - make -j 4 check
     # retest with IP_FORWARD enabled
     - make clean
-    - export EXTRA_CFLAGS="-DIP_FORWARD=1" && export CC="cc $EXTRA_CFLAGS"
+    - export EXTRA_CFLAGS="-DESP_LWIP=1 -DIP_FORWARD=1" && export CC="${CC} $EXTRA_CFLAGS"
     - make -j 4 check
     # retest with IP_FORWARD and IP_NAPT enabled
     - make clean
-    - export EXTRA_CFLAGS="-DIP_FORWARD=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="cc $EXTRA_CFLAGS"
+    - export EXTRA_CFLAGS="-DESP_LWIP=1 -DIP_FORWARD=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="${CC} $EXTRA_CFLAGS"
     - make -j 4 check
     # Please uncomment the below to test IP_FORWARD/IP_NAPT tests with debug output (only ip4_route test suite will be executed)
     #- make clean
-    #- export EXTRA_CFLAGS="-DIP_FORWARD=1 -DESP_TEST_DEBUG=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="cc $EXTRA_CFLAGS"
+    #- export EXTRA_CFLAGS="-DESP_LWIP=1 -DIP_FORWARD=1 -DESP_TEST_DEBUG=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="${CC} $EXTRA_CFLAGS"
     #- make -j 4 check    
 
 run_unittests_cmake:

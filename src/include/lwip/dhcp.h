@@ -50,13 +50,17 @@ extern "C" {
 #endif
 
 /** period (in seconds) of the application calling dhcp_coarse_tmr() */
-#define DHCP_COARSE_TIMER_SECS  60
+#ifndef DHCP_COARSE_TIMER_SECS
+#define DHCP_COARSE_TIMER_SECS 60
+#endif /* DHCP_COARSE_TIMER_SECS */
 /** period (in milliseconds) of the application calling dhcp_coarse_tmr() */
 #define DHCP_COARSE_TIMER_MSECS (DHCP_COARSE_TIMER_SECS * 1000UL)
 /** period (in milliseconds) of the application calling dhcp_fine_tmr() */
 #define DHCP_FINE_TIMER_MSECS   500
 
 #define DHCP_BOOT_FILE_LEN      128U
+
+
 
 /* AutoIP cooperation flags (struct dhcp.autoip_coop_state) */
 typedef enum {
@@ -78,14 +82,13 @@ struct dhcp
   u8_t autoip_coop_state;
 #endif
   u8_t subnet_mask_given;
-
   u16_t request_timeout; /* #ticks with period DHCP_FINE_TIMER_SECS for request timeout */
-  u16_t t1_timeout;  /* #ticks with period DHCP_COARSE_TIMER_SECS for renewal time */
-  u16_t t2_timeout;  /* #ticks with period DHCP_COARSE_TIMER_SECS for rebind time */
-  u16_t t1_renew_time;  /* #ticks with period DHCP_COARSE_TIMER_SECS until next renew try */
-  u16_t t2_rebind_time; /* #ticks with period DHCP_COARSE_TIMER_SECS until next rebind try */
-  u16_t lease_used; /* #ticks with period DHCP_COARSE_TIMER_SECS since last received DHCP ack */
-  u16_t t0_timeout; /* #ticks with period DHCP_COARSE_TIMER_SECS for lease time */
+  u32_t t1_timeout;  /* #ticks with period DHCP_COARSE_TIMER_SECS for renewal time */
+  u32_t t2_timeout;  /* #ticks with period DHCP_COARSE_TIMER_SECS for rebind time */
+  u32_t t1_renew_time;  /* #ticks with period DHCP_COARSE_TIMER_SECS until next renew try */
+  u32_t t2_rebind_time; /* #ticks with period DHCP_COARSE_TIMER_SECS until next rebind try */
+  u32_t lease_used; /* #ticks with period DHCP_COARSE_TIMER_SECS since last received DHCP ack */
+  u32_t t0_timeout; /* #ticks with period DHCP_COARSE_TIMER_SECS for lease time */
   ip_addr_t server_ip_addr; /* dhcp server address that offered this lease (ip_addr_t because passed to UDP) */
   ip4_addr_t offered_ip_addr;
   ip4_addr_t offered_sn_mask;

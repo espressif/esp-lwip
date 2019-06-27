@@ -135,7 +135,11 @@ static void tick_lwip(void)
   if (tick % 5 == 0) {
     dhcp_fine_tmr();
   }
+#if ESP_LWIP
+  if (tick % 10 == 0) {
+#else
   if (tick % 600 == 0) {
+#endif
     dhcp_coarse_tmr();
   }
 }
