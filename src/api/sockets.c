@@ -44,7 +44,9 @@
 #include "lwip/sockets.h"
 #include "lwip/priv/sockets_priv.h"
 #include "lwip/api.h"
+#include "lwip/sys.h"
 #include "lwip/igmp.h"
+#include "lwip/mld6.h"
 #include "lwip/inet.h"
 #include "lwip/tcp.h"
 #include "lwip/raw.h"
@@ -53,7 +55,7 @@
 #include "lwip/pbuf.h"
 #include "lwip/netif.h"
 #include "lwip/priv/tcpip_priv.h"
-#include "lwip/mld6.h"
+#include "lwip/priv/api_msg.h"
 #if LWIP_CHECKSUM_ON_COPY
 #include "lwip/inet_chksum.h"
 #endif
