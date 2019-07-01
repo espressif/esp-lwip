@@ -338,6 +338,12 @@ struct in_pktinfo {
 #define IPV6_LEAVE_GROUP     13
 #define IPV6_DROP_MEMBERSHIP IPV6_LEAVE_GROUP
 
+#if ESP_IPV6
+#define IPV6_MULTICAST_IF    0x300
+#define IPV6_MULTICAST_HOPS  0x301
+#define IPV6_MULTICAST_LOOP  0x302
+#endif
+
 typedef struct ipv6_mreq {
   struct in6_addr ipv6mr_multiaddr; /*  IPv6 multicast addr */
   unsigned int    ipv6mr_interface; /*  interface index, or 0 */
