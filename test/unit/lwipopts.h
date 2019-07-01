@@ -96,5 +96,7 @@
 #define ESP_IPV6                                1
 #define ESP_SOCKET                              0
 #define ESP_PPP                                 1
+#define ESP_LWIP_IGMP_TIMERS_ONDEMAND           1
+#define ESP_LWIP_MLD6_TIMERS_ONDEMAND           1
 
 #endif /* LWIP_HDR_LWIPOPTS_H */
