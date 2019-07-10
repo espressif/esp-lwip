@@ -540,9 +540,22 @@ udp_sendto_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *dst_ip,
   if (!IP_ADDR_PCB_VERSION_MATCH(pcb, dst_ip)) {
     return ERR_VAL;
   }
+#if ESP_IPV6
+#if LWIP_IPV4 && LWIP_IPV6
+  /* Unwrap IPV4-mapped IPV6 addresses and convert to native IPV4 here */
+  if (IP_IS_V4MAPPEDV6(dst_ip)) {
+    ip_addr_t dest_ipv4;
+    unmap_ipv4_mapped_ipv6(ip_2_ip4(&dest_ipv4), ip_2_ip6(dst_ip));
+#if LWIP_CHECKSUM_ON_COPY
+    return udp_sendto_chksum(pcb, p, &dest_ipv4, dst_port, have_chksum, chksum);
+#else
+    return udp_sendto(pcb, p, &dest_ipv4, dst_port);
+#endif /* LWIP_CHECKSUM_ON_COPY  */
+  }
+#endif /* LWIP_IPV4 && LWIP_IPV6 */
+#endif
 
   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE, ("udp_send\n"));
-
   if (pcb->netif_idx != NETIF_NO_INDEX) {
     netif = netif_get_by_index(pcb->netif_idx);
   } else {

@@ -133,6 +133,11 @@ extern const ip_addr_t ip_addr_any_type;
                                    ip_2_ip6(ipaddr)->addr[3] = 0; \
                                    ip6_addr_clear_zone(ip_2_ip6(ipaddr)); }while(0)
 
+#if ESP_IPV6
+#define IP_V6_EQ_PART(ipaddr, WORD, VAL) (ip_2_ip6(ipaddr)->addr[WORD] == htonl(VAL))
+#define IP_IS_V4MAPPEDV6(ipaddr) (IP_IS_V6(ipaddr) && IP_V6_EQ_PART(ipaddr, 0, 0) && IP_V6_EQ_PART(ipaddr, 1, 0) && IP_V6_EQ_PART(ipaddr, 2, 0x0000FFFF))
+#endif
+
 /** @ingroup ipaddr */
 #define ip_addr_copy(dest, src)      do{ IP_SET_TYPE_VAL(dest, IP_GET_TYPE(&src)); if(IP_IS_V6_VAL(src)){ \
   ip6_addr_copy(*ip_2_ip6(&(dest)), *ip_2_ip6(&(src))); }else{ \
