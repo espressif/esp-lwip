@@ -335,6 +335,11 @@ lwip_getaddrinfo(const char *nodename, const char *servname,
         type = NETCONN_DNS_IPV4;
       } else if (ai_family == AF_INET6) {
         type = NETCONN_DNS_IPV6;
+#if ESP_LWIP
+        if (hints->ai_flags & AI_V4MAPPED) {
+          type = NETCONN_DNS_IPV6_IPV4;
+        }
+#endif /* ESP_LWIP */
       }
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
       err = netconn_gethostbyname_addrtype(nodename, &addr, type);
@@ -350,6 +355,14 @@ lwip_getaddrinfo(const char *nodename, const char *servname,
       ip_addr_set_loopback_val(ai_family == AF_INET6, addr);
     }
   }
+
+#if ESP_LWIP && LWIP_IPV4 && LWIP_IPV6
+  if (ai_family == AF_INET6 && (hints->ai_flags & AI_V4MAPPED)
+      && IP_GET_TYPE(&addr) == IPADDR_TYPE_V4) {
+    /* Convert native V4 address to a V4-mapped IPV6 address */
+    ip4_2_ipv4_mapped_ipv6(ip_2_ip6(&addr), ip_2_ip4(&addr));
+  }
+#endif /* ESP_LWIP && LWIP_IPV4 && LWIP_IPV6 */
 
   total_size = sizeof(struct addrinfo) + sizeof(struct sockaddr_storage);
   if (nodename != NULL) {
