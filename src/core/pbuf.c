@@ -780,7 +780,7 @@ pbuf_free(struct pbuf *p)
         } else if (alloc_src == PBUF_TYPE_ALLOC_SRC_MASK_STD_MEMP_PBUF) {
 #if ESP_PBUF
         if (p->l2_owner != NULL && p->l2_buf != NULL && p->l2_owner->l2_buffer_free_notify != NULL) {
-            p->l2_owner->l2_buffer_free_notify(p->l2_buf);
+            p->l2_owner->l2_buffer_free_notify(p->l2_owner, p->l2_buf);
         }
 #endif
           memp_free(MEMP_PBUF, p);

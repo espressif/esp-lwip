@@ -407,7 +407,7 @@ struct netif {
 #endif /* LWIP_LOOPBACK_MAX_PBUFS */
 #endif /* ENABLE_LOOPBACK */
 #if ESP_PBUF
-  void (*l2_buffer_free_notify)(void *user_buf); /* Allows LWIP to notify driver when a L2-supplied pbuf can be freed */
+  void (*l2_buffer_free_notify)(struct netif *lwip_netif, void *user_buf); /* Allows LWIP to notify driver when a L2-supplied pbuf can be freed */
   ip_addr_t last_ip_addr; /* Store last non-zero ip address */
 #endif
 };
