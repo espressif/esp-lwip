@@ -977,7 +977,7 @@
 #endif
 
 #ifndef LWIP_DHCP_IP_ADDR_ERASE
-#define LWIP_DHCP_IP_ADDR_ERASE()
+#define LWIP_DHCP_IP_ADDR_ERASE(esp_netif)
 #endif
 
 /*
