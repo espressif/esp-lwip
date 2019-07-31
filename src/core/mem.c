@@ -97,12 +97,37 @@ mem_trim(void *mem, mem_size_t size)
 #ifndef mem_clib_free
 #define mem_clib_free free
 #endif
+#if ESP_LWIP
+/**
+ * If CONFIG_ALLOC_MEMORY_IN_SPIRAM_FIRST is enabled, Try to
+ * allocate memory for lwip in SPIRAM firstly. If failed, try to allocate
+ * internal memory then.
+ */
+#if CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST
+#ifndef mem_clib_malloc
+#define mem_clib_malloc(size)    heap_caps_malloc_prefer(size, 2, MALLOC_CAP_DEFAULT|MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT|MALLOC_CAP_INTERNAL)
+#endif
+#ifndef mem_clib_calloc
+#define mem_clib_calloc(n, size) heap_caps_calloc_prefer(n, size, 2, MALLOC_CAP_DEFAULT|MALLOC_CAP_SPIRAM, MALLOC_CAP_DEFAULT|MALLOC_CAP_INTERNAL)
+#endif
+#else /* CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST */
 #ifndef mem_clib_malloc
 #define mem_clib_malloc malloc
 #endif
 #ifndef mem_clib_calloc
 #define mem_clib_calloc calloc
 #endif
+#endif /* CONFIG_WIFI_LWIP_ALLOCATION_FROM_SPIRAM_FIRST */
+
+#else /* ESP_LWIP */
+
+#ifndef mem_clib_malloc
+#define mem_clib_malloc malloc
+#endif
+#ifndef mem_clib_calloc
+#define mem_clib_calloc calloc
+#endif
+#endif /* ESP_LWIP */
 
 #if LWIP_STATS && MEM_STATS
 #define MEM_LIBC_STATSHELPER_SIZE LWIP_MEM_ALIGN_SIZE(sizeof(mem_size_t))
