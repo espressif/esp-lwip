@@ -99,6 +99,6 @@
 #define ESP_LWIP_IGMP_TIMERS_ONDEMAND           1
 #define ESP_LWIP_MLD6_TIMERS_ONDEMAND           1
 #define ESP_GRATUITOUS_ARP                      1
-
+#define ESP_LWIP_SELECT                         1
 
 #endif /* LWIP_HDR_LWIPOPTS_H */
