@@ -2582,6 +2582,9 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
 static void select_check_waiters(int s, int has_recvevent, int has_sendevent, int has_errevent)
 {
   struct lwip_select_cb *scb;
+#if ESP_LWIP
+  struct lwip_sock *sock;
+#endif /* ESP_LWIP */
 #if !LWIP_TCPIP_CORE_LOCKING
   int last_select_cb_ctr;
   SYS_ARCH_DECL_PROTECT(lev);
@@ -2589,6 +2592,9 @@ static void select_check_waiters(int s, int has_recvevent, int has_sendevent, in
 
   LWIP_ASSERT_CORE_LOCKED();
 
+#if ESP_LWIP
+  sock = tryget_socket_unconn(s);
+#endif /* ESP_LWIP */
 #if !LWIP_TCPIP_CORE_LOCKING
   SYS_ARCH_PROTECT(lev);
 again:
@@ -2610,17 +2616,29 @@ again:
 #if LWIP_SOCKET_SELECT
       {
         /* Test this select call for our socket */
+#if ESP_LWIP
+        if (sock->rcvevent) {
+#else
         if (has_recvevent) {
+#endif /* ESP_LWIP */
           if (scb->readset && FD_ISSET(s, scb->readset)) {
             do_signal = 1;
           }
         }
+#if ESP_LWIP
+        if (sock->sendevent) {
+#else
         if (has_sendevent) {
+#endif /* ESP_LWIP */
           if (!do_signal && scb->writeset && FD_ISSET(s, scb->writeset)) {
             do_signal = 1;
           }
         }
+#if ESP_LWIP
+        if (sock->errevent) {
+#else
         if (has_errevent) {
+#endif /* ESP_LWIP */
           if (!do_signal && scb->exceptset && FD_ISSET(s, scb->exceptset)) {
             do_signal = 1;
           }
@@ -2650,6 +2668,9 @@ again:
     last_select_cb_ctr = select_cb_ctr;
   }
   SYS_ARCH_UNPROTECT(lev);
+#if ESP_LWIP
+  done_socket(sock);
+#endif /* ESP_LWIP */
 #endif
 }
 #endif /* LWIP_SOCKET_SELECT || LWIP_SOCKET_POLL */
