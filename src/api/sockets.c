@@ -445,6 +445,10 @@ tryget_socket_unconn_locked(int fd)
 {
   struct lwip_sock *ret = tryget_socket_unconn_nouse(fd);
   if (ret != NULL) {
+#if ESP_LWIP      
+    if (ret->conn == NULL)
+      return NULL;
+#endif /* ESP_LWIP */         
     if (!sock_inc_used_locked(ret)) {
       return NULL;
     }
