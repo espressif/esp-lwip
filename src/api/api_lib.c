@@ -505,7 +505,7 @@ netconn_accept(struct netconn *conn, struct netconn **new_conn)
 
   NETCONN_MBOX_WAITING_INC(conn);
   if (netconn_is_nonblocking(conn)) {
-    if (sys_arch_mbox_tryfetch(&conn->acceptmbox, &accept_ptr) == SYS_ARCH_TIMEOUT) {
+    if (sys_arch_mbox_tryfetch(&conn->acceptmbox, &accept_ptr) == SYS_MBOX_EMPTY) {
       API_MSG_VAR_FREE_ACCEPT(msg);
       NETCONN_MBOX_WAITING_DEC(conn);
       return ERR_WOULDBLOCK;
@@ -610,7 +610,7 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
 #endif /* !ESP_LWIP_LOCK */  
   if (netconn_is_nonblocking(conn) || (apiflags & NETCONN_DONTBLOCK) ||
       (conn->flags & NETCONN_FLAG_MBOXCLOSED) || (conn->pending_err != ERR_OK)) {
-    if (sys_arch_mbox_tryfetch(&conn->recvmbox, &buf) == SYS_ARCH_TIMEOUT) {
+    if (sys_arch_mbox_tryfetch(&conn->recvmbox, &buf) == SYS_MBOX_EMPTY) {
       err_t err;
       NETCONN_MBOX_WAITING_DEC(conn);
       err = netconn_err(conn);
