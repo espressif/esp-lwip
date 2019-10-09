@@ -571,7 +571,7 @@ dhcp_t1_timeout(struct netif *netif)
     if (((dhcp->t2_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS))
 #endif
     {
-      dhcp->t1_renew_time = (u16_t)((dhcp->t2_timeout - dhcp->lease_used) / 2);
+      dhcp->t1_renew_time = ((dhcp->t2_timeout - dhcp->lease_used) / 2);
     }
   }
 }
@@ -601,8 +601,8 @@ dhcp_t2_timeout(struct netif *netif)
 #else
     if (((dhcp->t0_timeout - dhcp->lease_used) / 2) >= ((60 + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS))
 #endif
-     {
-      dhcp->t2_rebind_time = (u16_t)((dhcp->t0_timeout - dhcp->lease_used) / 2);
+    {
+      dhcp->t2_rebind_time = ((dhcp->t0_timeout - dhcp->lease_used) / 2);
     }
   }
 }
