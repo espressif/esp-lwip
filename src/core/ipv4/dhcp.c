@@ -403,6 +403,14 @@ dhcp_select(struct netif *netif)
     options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_REQUESTED_IP, 4);
     options_out_len = dhcp_option_long(options_out_len, msg_out->options, lwip_ntohl(ip4_addr_get_u32(&dhcp->offered_ip_addr)));
 
+#if ESP_DHCP
+    options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID, DHCP_OPTION_CLIENT_ID_MAC_LEN);
+    options_out_len = dhcp_option_byte(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID_MAC);
+    for (i = 0; i < netif->hwaddr_len; i++) {
+      options_out_len = dhcp_option_byte(options_out_len, msg_out->options, netif->hwaddr[i]);   
+    }
+#endif/* ESP_DHCP */
+
     options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_SERVER_ID, 4);
     options_out_len = dhcp_option_long(options_out_len, msg_out->options, lwip_ntohl(ip4_addr_get_u32(ip_2_ip4(&dhcp->server_ip_addr))));
 
@@ -1085,7 +1093,13 @@ dhcp_discover(struct netif *netif)
 #if LWIP_NETIF_HOSTNAME
     options_out_len = dhcp_option_hostname(options_out_len, msg_out->options, netif);
 #endif /* LWIP NETIF HOSTNAME */
-#endif /* ESP_DHCP */
+
+    options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID, DHCP_OPTION_CLIENT_ID_MAC_LEN);
+    options_out_len = dhcp_option_byte(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID_MAC);
+    for (i = 0; i < netif->hwaddr_len; i++) {
+      options_out_len = dhcp_option_byte(options_out_len, msg_out->options, netif->hwaddr[i]);   
+    }
+#endif/* ESP_DHCP */
 
     options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_PARAMETER_REQUEST_LIST, LWIP_ARRAYSIZE(dhcp_discover_request_options));
     for (i = 0; i < LWIP_ARRAYSIZE(dhcp_discover_request_options); i++) {
