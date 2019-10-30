@@ -597,6 +597,11 @@ accept_function(void *arg, struct tcp_pcb *newpcb, err_t err)
     tcp_err(pcb, NULL);
     /* remove reference from to the pcb from this netconn */
     newconn->pcb.tcp = NULL;
+#if ESP_LWIP
+#if LWIP_NETCONN_FULLDUPLEX
+    newconn->flags |= NETCONN_FLAG_MBOXINVALID;
+#endif /* LWIP_NETCONN_FULLDUPLEX */
+#endif /* ESP_LWIP */   
     /* no need to drain since we know the recvmbox is empty. */
     sys_mbox_free(&newconn->recvmbox);
     sys_mbox_set_invalid(&newconn->recvmbox);
