@@ -94,8 +94,13 @@
 #if LWIP_NETCONN_FULLDUPLEX
 #define NETCONN_RECVMBOX_WAITABLE(conn) (sys_mbox_valid(&(conn)->recvmbox) && (((conn)->flags & NETCONN_FLAG_MBOXINVALID) == 0))
 #define NETCONN_ACCEPTMBOX_WAITABLE(conn) (sys_mbox_valid(&(conn)->acceptmbox) && (((conn)->flags & (NETCONN_FLAG_MBOXCLOSED|NETCONN_FLAG_MBOXINVALID)) == 0))
+#if ESP_LWIP_LOCK
+#define NETCONN_MBOX_WAITING_INC(conn) conn->mbox_threads_waiting += 1
+#define NETCONN_MBOX_WAITING_DEC(conn) conn->mbox_threads_waiting -= 1
+#else 
 #define NETCONN_MBOX_WAITING_INC(conn) SYS_ARCH_INC(conn->mbox_threads_waiting, 1)
 #define NETCONN_MBOX_WAITING_DEC(conn) SYS_ARCH_DEC(conn->mbox_threads_waiting, 1)
+#endif /* ESP_LWIP_LOCK */
 #else /* LWIP_NETCONN_FULLDUPLEX */
 #define NETCONN_RECVMBOX_WAITABLE(conn)   sys_mbox_valid(&(conn)->recvmbox)
 #define NETCONN_ACCEPTMBOX_WAITABLE(conn) (sys_mbox_valid(&(conn)->acceptmbox) && (((conn)->flags & NETCONN_FLAG_MBOXCLOSED) == 0))
@@ -585,8 +590,14 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
   *new_buf = NULL;
   LWIP_ERROR("netconn_recv: invalid conn",    (conn != NULL),    return ERR_ARG;);
 
+#if ESP_LWIP_LOCK
+  NETCONN_MBOX_WAITING_INC(conn);
+#endif /* ESP_LWIP_LOCK */
   if (!NETCONN_RECVMBOX_WAITABLE(conn)) {
     err_t err = netconn_err(conn);
+#if ESP_LWIP_LOCK
+    NETCONN_MBOX_WAITING_DEC(conn);
+#endif /* ESP_LWIP_LOCK */   
     if (err != ERR_OK) {
       /* return pending error */
       return err;
@@ -594,7 +605,9 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
     return ERR_CONN;
   }
 
+#if !ESP_LWIP_LOCK
   NETCONN_MBOX_WAITING_INC(conn);
+#endif /* !ESP_LWIP_LOCK */  
   if (netconn_is_nonblocking(conn) || (apiflags & NETCONN_DONTBLOCK) ||
       (conn->flags & NETCONN_FLAG_MBOXCLOSED) || (conn->pending_err != ERR_OK)) {
     if (sys_arch_mbox_tryfetch(&conn->recvmbox, &buf) == SYS_ARCH_TIMEOUT) {

@@ -289,7 +289,11 @@ static struct lwip_select_cb *select_cb_list;
 #if LWIP_SOCKET_SELECT || LWIP_SOCKET_POLL
 static void event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len);
 #define DEFAULT_SOCKET_EVENTCB event_callback
+#if ESP_LWIP_SELECT
+static void select_check_waiters(int s, int has_recvevent, int has_sendevent, int has_errevent, struct lwip_sock *sock_select);
+#else
 static void select_check_waiters(int s, int has_recvevent, int has_sendevent, int has_errevent);
+#endif /* LWIP_SOCKET_SELECT */
 #else
 #define DEFAULT_SOCKET_EVENTCB NULL
 #endif
@@ -337,11 +341,17 @@ static int
 sock_inc_used(struct lwip_sock *sock)
 {
   int ret;
+#if !ESP_LWIP_LOCK
   SYS_ARCH_DECL_PROTECT(lev);
+#endif /* !ESP_LWIP_LOCK */  
 
   LWIP_ASSERT("sock != NULL", sock != NULL);
 
+#if ESP_LWIP_LOCK
+  SYS_ARCH_PROTECT_SOCK(sock);
+#else
   SYS_ARCH_PROTECT(lev);
+#endif /* ESP_LWIP_LOCK */
   if (sock->fd_free_pending) {
     /* prevent new usage of this socket if free is pending */
     ret = 0;
@@ -350,7 +360,11 @@ sock_inc_used(struct lwip_sock *sock)
     ret = 1;
     LWIP_ASSERT("sock->fd_used != 0", sock->fd_used != 0);
   }
+#if ESP_LWIP_LOCK
+  SYS_ARCH_UNPROTECT_SOCK(sock);
+#else 
   SYS_ARCH_UNPROTECT(lev);
+#endif /* ESP_LWIP_LOCK */  
   return ret;
 }
 
@@ -360,13 +374,22 @@ sock_inc_used_locked(struct lwip_sock *sock)
 {
   LWIP_ASSERT("sock != NULL", sock != NULL);
 
+#if ESP_LWIP_LOCK
+  SYS_ARCH_PROTECT_SOCK(sock);
+#endif /* ESP_LWIP_LOCK */  
   if (sock->fd_free_pending) {
     LWIP_ASSERT("sock->fd_used != 0", sock->fd_used != 0);
+#if ESP_LWIP_LOCK
+  SYS_ARCH_UNPROTECT_SOCK(sock);
+#endif /* ESP_LWIP_LOCK */
     return 0;
   }
 
   ++sock->fd_used;
   LWIP_ASSERT("sock->fd_used != 0", sock->fd_used != 0);
+#if ESP_LWIP_LOCK
+  SYS_ARCH_UNPROTECT_SOCK(sock);
+#endif /* ESP_LWIP_LOCK */ 
   return 1;
 }
 
@@ -382,10 +405,16 @@ done_socket(struct lwip_sock *sock)
   int is_tcp = 0;
   struct netconn *conn = NULL;
   union lwip_sock_lastdata lastdata;
+#if !ESP_LWIP_LOCK
   SYS_ARCH_DECL_PROTECT(lev);
+#endif /* !ESP_LWIP_LOCK */ 
   LWIP_ASSERT("sock != NULL", sock != NULL);
 
+#if ESP_LWIP_LOCK
+  SYS_ARCH_PROTECT_SOCK(sock);
+#else
   SYS_ARCH_PROTECT(lev);
+#endif /* ESP_LWIP_LOCK */
   LWIP_ASSERT("sock->fd_used > 0", sock->fd_used > 0);
   if (--sock->fd_used == 0) {
     if (sock->fd_free_pending) {
@@ -395,7 +424,11 @@ done_socket(struct lwip_sock *sock)
       freed = free_socket_locked(sock, is_tcp, &conn, &lastdata);
     }
   }
+#if ESP_LWIP_LOCK
+  SYS_ARCH_UNPROTECT_SOCK(sock);
+#else 
   SYS_ARCH_UNPROTECT(lev);
+#endif /* ESP_LWIP_LOCK */
 
   if (freed) {
     free_socket_free_elements(is_tcp, conn, &lastdata);
@@ -536,6 +569,14 @@ alloc_socket(struct netconn *newconn, int accepted)
       sockets[i].sendevent  = (NETCONNTYPE_GROUP(newconn->type) == NETCONN_TCP ? (accepted != 0) : 1);
       sockets[i].errevent   = 0;
 #endif /* LWIP_SOCKET_SELECT || LWIP_SOCKET_POLL */
+#if ESP_LWIP_LOCK
+      if (!sockets[i].lock) {
+        /* one time init and never free */
+        if (sys_mutex_new(&sockets[i].lock) != ERR_OK) {
+          return -1;
+        }
+      }
+#endif
       return i + LWIP_SOCKET_OFFSET;
     }
     SYS_ARCH_UNPROTECT(lev);
@@ -602,13 +643,23 @@ free_socket(struct lwip_sock *sock, int is_tcp)
   int freed;
   struct netconn *conn;
   union lwip_sock_lastdata lastdata;
+#if !ESP_LWIP_LOCK
   SYS_ARCH_DECL_PROTECT(lev);
+#endif /* !ESP_LWIP_LOCK */
 
   /* Protect socket array */
+#if ESP_LWIP_LOCK
+  SYS_ARCH_PROTECT_SOCK(sock);
+#else
   SYS_ARCH_PROTECT(lev);
+#endif /* ESP_LWIP_LOCK */
 
   freed = free_socket_locked(sock, is_tcp, &conn, &lastdata);
+#if ESP_LWIP_LOCK
+  SYS_ARCH_UNPROTECT_SOCK(sock);
+#else 
   SYS_ARCH_UNPROTECT(lev);
+#endif /* ESP_LWIP_LOCK */
   /* don't use 'sock' after this line, as another task might have allocated it */
 
   if (freed) {
@@ -2509,8 +2560,11 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
       s = conn->socket;
       SYS_ARCH_UNPROTECT(lev);
     }
-
+#if ESP_LWIP_LOCK
+    sock = tryget_socket_unconn_nouse(s);
+#else    
     sock = get_socket(s);
+#endif /* ESP_LWIP_LOCK */    
     if (!sock) {
       return;
     }
@@ -2558,11 +2612,17 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
     has_errevent = sock->errevent != 0;
     SYS_ARCH_UNPROTECT(lev);
     /* Check any select calls waiting on this socket */
+#if ESP_LWIP_SELECT
+    select_check_waiters(s, has_recvevent, has_sendevent, has_errevent, sock);
+#else    
     select_check_waiters(s, has_recvevent, has_sendevent, has_errevent);
-  } else {
+#endif/* LWIP_SOCKET_SELECT */   
+  } else {       
     SYS_ARCH_UNPROTECT(lev);
   }
-  done_socket(sock);
+#if !ESP_LWIP_LOCK  
+   done_socket(sock);
+#endif /* !ESP_LWIP_LOCK */  
 }
 
 /**
@@ -2578,19 +2638,24 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
  * select_cb_list during our UNPROTECT/PROTECT. We use a generational counter to
  * detect this change and restart the list walk. The list is expected to be small
  */
+#if ESP_LWIP_SELECT
+static void select_check_waiters(int s, int has_recvevent, int has_sendevent, int has_errevent, struct lwip_sock *sock_select)
+#else
 static void select_check_waiters(int s, int has_recvevent, int has_sendevent, int has_errevent)
+#endif /* LWIP_SOCKET_SELECT */
 {
   struct lwip_select_cb *scb;
-  struct lwip_sock *sock;
+#if ESP_LWIP_SELECT
+  struct lwip_sock *sock = sock_select;
+#else  
+  struct lwip_sock *sock
+#endif /* ESP_LWIP_LOCK */ 
 #if !LWIP_TCPIP_CORE_LOCKING
   int last_select_cb_ctr;
   SYS_ARCH_DECL_PROTECT(lev);
 #endif /* !LWIP_TCPIP_CORE_LOCKING */
 
   LWIP_ASSERT_CORE_LOCKED();
-#if ESP_LWIP_SELECT  
-  sock = tryget_socket_unconn(s);
-#endif/* ESP_LWIP_SELECT */ 
 #if !LWIP_TCPIP_CORE_LOCKING
   SYS_ARCH_PROTECT(lev);
 again:
@@ -2664,9 +2729,6 @@ again:
     last_select_cb_ctr = select_cb_ctr;
   }
   SYS_ARCH_UNPROTECT(lev);
-#if ESP_LWIP_SELECT  
-  done_socket(sock);
-#endif/* ESP_LWIP_SELECT */  
 #endif
 }
 #endif /* LWIP_SOCKET_SELECT || LWIP_SOCKET_POLL */

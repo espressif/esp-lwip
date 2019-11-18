@@ -922,8 +922,11 @@ netconn_mark_mbox_invalid(struct netconn *conn)
 
   /* Prevent new calls/threads from reading from the mbox */
   conn->flags |= NETCONN_FLAG_MBOXINVALID;
-
+#if ESP_LWIP_LOCK
   SYS_ARCH_LOCKED(num_waiting = conn->mbox_threads_waiting);
+#else
+  num_waiting = conn->mbox_threads_waiting;
+#endif /* ESP_LWIP_LOCK */  
   for (i = 0; i < num_waiting; i++) {
     if (sys_mbox_valid_val(conn->recvmbox)) {
       sys_mbox_trypost(&conn->recvmbox, msg);
