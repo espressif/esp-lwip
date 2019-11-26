@@ -1169,8 +1169,13 @@ lwip_netconn_do_delconn(void *m)
   } else
 #endif /* LWIP_NETCONN_FULLDUPLEX */
   {
+#if ESP_LWIP
+    LWIP_ASSERT("blocking connect in progress",
+                (msg->conn->state != NETCONN_CONNECT) || IN_NONBLOCKING_CONNECT(msg->conn));
+#else    
     LWIP_ASSERT("blocking connect in progress",
                 (state != NETCONN_CONNECT) || IN_NONBLOCKING_CONNECT(msg->conn));
+#endif /* ESP_LWIP */                
     msg->err = ERR_OK;
 #if LWIP_NETCONN_FULLDUPLEX
     /* Mark mboxes invalid */
