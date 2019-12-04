@@ -83,4 +83,7 @@
 /* Check lwip_stats.mem.illegal instead of asserting */
 #define LWIP_MEM_ILLEGAL_FREE(msg)      /* to nothing */
 
+/* Enable Espressif specific options */
+#define ESP_LWIP                        1
+
 #endif /* LWIP_HDR_LWIPOPTS_H */
