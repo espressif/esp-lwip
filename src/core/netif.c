@@ -331,8 +331,12 @@ netif_add(struct netif *netif,
 #endif /* LWIP_NUM_NETIF_CLIENT_DATA */
 #if LWIP_IPV6
 #if LWIP_IPV6_AUTOCONFIG
+#if ESP_IPV6_AUTOCONFIG
+  netif->ip6_autoconfig_enabled = 1;
+#else
   /* IPv6 address autoconfiguration not enabled by default */
   netif->ip6_autoconfig_enabled = 0;
+#endif
 #endif /* LWIP_IPV6_AUTOCONFIG */
   nd6_restart_netif(netif);
 #endif /* LWIP_IPV6 */
