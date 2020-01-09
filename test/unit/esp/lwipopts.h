@@ -32,7 +32,6 @@ limitations under the License.
 #define ESP_STATS_DROP                          0
 #define ESP_STATS_TCP                           0
 #define ESP_IRAM_ATTR                   
-#define ESP_RANDOM_TCP_PORT                     0 
 #define ESP_GRATUITOUS_ARP                      1
 
 #include "../lwipopts.h"
