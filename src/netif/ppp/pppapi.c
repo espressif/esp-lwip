@@ -82,7 +82,7 @@ pppapi_set_default(ppp_pcb *pcb)
   return err;
 }
 
-#if ESP_PPP
+#if ESP_PPP && PPP_AUTH_SUPPORT
 /**
  * Call ppp_set_auth() inside the tcpip_thread context.
  */
