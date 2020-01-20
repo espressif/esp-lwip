@@ -612,6 +612,9 @@ free_socket_locked(struct lwip_sock *sock, int is_tcp, struct netconn **conn,
 
   *lastdata = sock->lastdata;
   sock->lastdata.pbuf = NULL;
+#if ESP_LWIP
+  sock->select_waiting = 0;
+#endif /* ESP_LWIP */
   *conn = sock->conn;
   sock->conn = NULL;
   return 1;
