@@ -39,7 +39,21 @@ run_unittests:
   dependencies: []
   script:
     - *get_contrib
-    - LWIPDIR=../../../../src make -C ${CONTRIB}/ports/unix/check check
+    - export LWIPDIR=../../../../src && cd ${CONTRIB}/ports/unix/check
+    # build and run default lwip tests
+    - make -j 4 check
+    # retest with IP_FORWARD enabled
+    - make clean
+    - export EXTRA_CFLAGS="-DIP_FORWARD=1" && export CC="cc $EXTRA_CFLAGS"
+    - make -j 4 check
+    # retest with IP_FORWARD and IP_NAPT enabled
+    - make clean
+    - export EXTRA_CFLAGS="-DIP_FORWARD=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="cc $EXTRA_CFLAGS"
+    - make -j 4 check
+    # Please uncomment the below to test IP_FORWARD/IP_NAPT tests with debug output (only ip4_route test suite will be executed)
+    #- make clean
+    #- export EXTRA_CFLAGS="-DIP_FORWARD=1 -DESP_TEST_DEBUG=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="cc $EXTRA_CFLAGS"
+    #- make -j 4 check    
 
 run_unittests_cmake:
   stage: host_test

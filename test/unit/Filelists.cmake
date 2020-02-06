@@ -18,6 +18,7 @@ set(LWIP_TESTFILES
 	${LWIP_TESTDIR}/core/test_netif.c
 	${LWIP_TESTDIR}/core/test_pbuf.c
 	${LWIP_TESTDIR}/core/test_timers.c
+	${LWIP_TESTDIR}/core/test_ip4_route.c
 	${LWIP_TESTDIR}/dhcp/test_dhcp.c
 	${LWIP_TESTDIR}/etharp/test_etharp.c
 	${LWIP_TESTDIR}/ip4/test_ip4.c

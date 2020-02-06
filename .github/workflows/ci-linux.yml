@@ -23,10 +23,16 @@ jobs:
         unzip -oq ${CONTRIB}.zip
         patch -s -p0 < test/${CONTRIB}.patch
 
-    - name: Build unit tests with make
-      run: LWIPDIR=../../../../src make -C ${CONTRIB}/ports/unix/check
-    - name: Run unit tests
-      run: LWIPDIR=../../../../src make -C ${CONTRIB}/ports/unix/check check
+    - name: Build and Run unit tests with make
+      run: |
+        export LWIPDIR=../../../../src && cd ${CONTRIB}/ports/unix/check
+        make -j 4 check
+        make clean
+        export EXTRA_CFLAGS="-DIP_FORWARD=1" && export CC="cc $EXTRA_CFLAGS"
+        make -j 4 check
+        make clean
+        export EXTRA_CFLAGS="-DIP_FORWARD=1 -DIP_NAPT=1 -DLWIP_ARCH_CC_H -include cc_esp_platform.h" && export CC="cc $EXTRA_CFLAGS"
+        make -j 4 check      
 
     - name: Run cmake
       run: mkdir build && cd build && cmake .. -G Ninja

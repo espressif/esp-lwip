@@ -391,6 +391,9 @@ struct netif {
   u8_t reschedule_poll;
 #endif /* LWIP_NETIF_LOOPBACK_MULTITHREADING */
 #endif /* ENABLE_LOOPBACK */
+#if LWIP_IPV4 && IP_NAPT
+  u8_t napt;
+#endif /*LWIP_IPV4 && IP_NAPT */
 };
 
 #if LWIP_CHECKSUM_CTRL_PER_NETIF

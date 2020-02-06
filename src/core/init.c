@@ -241,6 +241,8 @@ PACK_STRUCT_END
 #error "For LWIP_NETCONN_FULLDUPLEX to work, LWIP_NETCONN_SEM_PER_THREAD is required"
 #endif
 
+#if LWIP_SOCKET
+#endif /* LWIP_SOCKET */
 
 /* Compile-time checks for deprecated options.
  */
