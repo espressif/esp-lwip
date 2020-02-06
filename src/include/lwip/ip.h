@@ -172,6 +172,12 @@ extern struct ip_globals ip_data;
 /** Destination IP4 address of current_header */
 #define ip4_current_dest_addr()    (ip_2_ip4(&ip_data.current_iphdr_dest))
 
+#if NAPT_DEBUG
+void napt_debug_print()ICACHE_FLASH_ATTR;
+#else
+#define napt_debug_print(p)
+#endif /* NAPT_DEBUG */
+
 #elif LWIP_IPV4 /* LWIP_IPV4 && LWIP_IPV6 */
 
 /** Get the IPv4 header of the current packet.

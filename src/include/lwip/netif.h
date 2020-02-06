@@ -410,6 +410,9 @@ struct netif {
   void (*l2_buffer_free_notify)(struct netif *lwip_netif, void *user_buf); /* Allows LWIP to notify driver when a L2-supplied pbuf can be freed */
   ip_addr_t last_ip_addr; /* Store last non-zero ip address */
 #endif
+#if LWIP_IPV4 && IP_NAPT
+  u8_t napt;
+#endif
 };
 #if LWIP_CHECKSUM_CTRL_PER_NETIF
 #define NETIF_SET_CHECKSUM_CTRL(netif, chksumflags) do { \
