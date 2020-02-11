@@ -348,6 +348,9 @@ sock_inc_used(struct lwip_sock *sock)
   LWIP_ASSERT("sock != NULL", sock != NULL);
 
 #if ESP_LWIP_LOCK
+  if (sock->lock == NULL) {
+    return 0;
+  }
   SYS_ARCH_PROTECT_SOCK(sock);
 #else
   SYS_ARCH_PROTECT(lev);
