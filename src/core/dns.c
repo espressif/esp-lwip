@@ -408,17 +408,6 @@ dns_clear_servers(bool keep_fallback)
  * @return IP address of the indexed DNS server or "ip_addr_any" if the DNS
  *         server has not been configured.
  */
-#if ESP_DNS
-ip_addr_t
-dns_getserver(u8_t numdns)
-{
-  if (numdns < DNS_MAX_SERVERS) {
-    return dns_servers[numdns];
-  } else {
-    return *IP_ADDR_ANY;
-  }
-}
-#else
 const ip_addr_t*
 dns_getserver(u8_t numdns)
 {
@@ -428,7 +417,6 @@ dns_getserver(u8_t numdns)
     return IP_ADDR_ANY;
   }
 }
-#endif
 
 
 /**
