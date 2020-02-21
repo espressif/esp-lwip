@@ -405,6 +405,10 @@ struct netif {
 #if LWIP_LOOPBACK_MAX_PBUFS
   u16_t loop_cnt_current;
 #endif /* LWIP_LOOPBACK_MAX_PBUFS */
+#if LWIP_NETIF_LOOPBACK_MULTITHREADING
+  /* Used if the original scheduling failed. */
+  u8_t reschedule_poll;
+#endif /* LWIP_NETIF_LOOPBACK_MULTITHREADING */
 #endif /* ENABLE_LOOPBACK */
 #if ESP_PBUF
   void (*l2_buffer_free_notify)(struct netif *lwip_netif, void *user_buf); /* Allows LWIP to notify driver when a L2-supplied pbuf can be freed */
