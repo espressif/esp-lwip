@@ -322,9 +322,6 @@ mld6_joingroup(const ip6_addr_t *srcaddr, const ip6_addr_t *groupaddr)
   err_t         err = ERR_VAL; /* no matching interface */
   struct netif *netif;
   LWIP_ASSERT_CORE_LOCKED();
-#if ESP_IPV6
-  LWIP_ERROR("mld6_joingroup: attempt to join non-multicast address", ip6_addr_ismulticast(groupaddr), return ERR_VAL;);
-#endif
   /* loop through netif's */
   NETIF_FOREACH(netif) {
     /* Should we join this interface ? */
@@ -355,7 +352,9 @@ mld6_joingroup_netif(struct netif *netif, const ip6_addr_t *groupaddr)
   struct mld_group *group;
 #if LWIP_IPV6_SCOPES
   ip6_addr_t ip6addr;
-
+#if ESP_IPV6
+  LWIP_ERROR("mld6_joingroup: attempt to join non-multicast address", ip6_addr_ismulticast(groupaddr), return ERR_VAL;);
+#endif
   /* If the address has a particular scope but no zone set, use the netif to
    * set one now. Within the mld6 module, all addresses are properly zoned. */
   if (ip6_addr_lacks_zone(groupaddr, IP6_MULTICAST)) {
