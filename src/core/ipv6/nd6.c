@@ -1147,15 +1147,6 @@ nd6_tmr(void)
           }
 #endif
         } else if (netif_is_up(netif) && netif_is_link_up(netif)) {
-#if ESP_IPV6
-#if LWIP_IPV6_MLD
-          if ((netif_ip6_addr_state(netif, i) & IP6_ADDR_TENTATIVE_COUNT_MASK) == 0) {
-            /* Join solicited node multicast group. */
-            ip6_addr_set_solicitednode(&multicast_address, netif_ip6_addr(netif, i)->addr[3]);
-            mld6_joingroup(netif_ip6_addr(netif, i), &multicast_address);
-          }
-#endif /* LWIP_IPV6_MLD */
-#endif
           /* tentative: set next state by increasing by one */
           netif_ip6_addr_set_state(netif, i, addr_state + 1);
           /* Send a NS for this address. Use the unspecified address as source
