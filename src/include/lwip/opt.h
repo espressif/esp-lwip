@@ -736,7 +736,7 @@
  * interface, define this to 0.
  */
 #if !defined IP_FORWARD || defined __DOXYGEN__
-#define IP_FORWARD                      1
+#define IP_FORWARD                      0
 #endif
 
 /**
@@ -767,8 +767,12 @@
 #define IP_FRAG                         0
 #endif /* !LWIP_IPV4 */
 
-#ifndef IP_NAPT
-#define IP_NAPT                         1
+/**
+ * IP_NAPT==1: Enables IPv4 Network Address and Port Translation
+ * Note that IP_FORWARD needs to be enabled for NAPT to work
+ */
+#if !defined IP_NAPT || defined __DOXYGEN__
+#define IP_NAPT                      0
 #endif
 
 /**
@@ -1118,7 +1122,7 @@
  * transport.
  */
 #if !defined LWIP_DNS || defined __DOXYGEN__
-#define LWIP_DNS                        1
+#define LWIP_DNS                        0
 #endif
 
 /** DNS maximum number of entries to maintain locally. */

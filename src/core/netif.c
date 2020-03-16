@@ -367,9 +367,11 @@ netif_add(struct netif *netif,
   netif->loop_cnt_current = 0;
 #endif /* ENABLE_LOOPBACK && LWIP_LOOPBACK_MAX_PBUFS */
 
+#if ESP_LWIP
 #if IP_NAPT
   netif->napt = 0;
 #endif /* IP_NAPT */
+#endif /* ESP_LWIP */
 
 #if LWIP_IPV4
   netif_set_addr(netif, ipaddr, netmask, gw);
