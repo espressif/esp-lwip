@@ -102,4 +102,19 @@
 #define ESP_LWIP_SELECT                         1
 #define ESP_LWIP_LOCK                           1
 
+#ifdef IP_NAPT
+#define IP_NAPT_MAX                     16
+#undef LWIP_RAND
+#define LWIP_RAND() (esp_random())
+#include "lwip/arch.h"
+u32_t esp_random(void);
+#endif /* IP_NAPT */
+/* ESP debug options */
+#ifdef ESP_TEST_DEBUG
+#define NAPT_DEBUG                      LWIP_DBG_ON
+#define IP_DEBUG                        LWIP_DBG_ON
+#define UDP_DEBUG                       LWIP_DBG_ON
+#define TCP_DEBUG                       LWIP_DBG_ON
+#endif /* ESP_TEST_DEBUG */
+
 #endif /* LWIP_HDR_LWIPOPTS_H */
