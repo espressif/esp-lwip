@@ -23,6 +23,7 @@ limitations under the License.
 
 /* ESP specific cofiguration */
 #define ESP_LWIP                                1
+#define ESP_IPV6                                1
 #define ESP_DHCP                                1 
 #define ESP_DHCP_TIMER                          1 
 #define ESP_DHCPS_TIMER                         0
