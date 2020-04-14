@@ -61,6 +61,7 @@
 #include "lwip/pbuf.h"
 #include "lwip/priv/tcpip_priv.h"
 #include "lwip/priv/api_msg.h"
+#include "lwip/priv/sockets_priv.h"
 #if LWIP_CHECKSUM_ON_COPY
 #include "lwip/inet_chksum.h"
 #endif
@@ -189,7 +190,7 @@ static void sockaddr_to_ipaddr_port(const struct sockaddr* sockaddr, ip_addr_t* 
 #define LWIP_SO_SNDRCVTIMEO_GET_MS(optval) ((((const struct timeval *)(optval))->tv_sec * 1000U) + (((const struct timeval *)(optval))->tv_usec / 1000U))
 #endif
 
-#define NUM_SOCKETS MEMP_NUM_NETCONN
+//#define NUM_SOCKETS MEMP_NUM_NETCONN
 
 #if !defined IOV_MAX
 #define IOV_MAX 0xFFFF
@@ -204,6 +205,7 @@ static void sockaddr_to_ipaddr_port(const struct sockaddr* sockaddr, ip_addr_t* 
 #define SELWAIT_T u8_t
 #endif
 
+#if 0
 /** Contains all internal pointers and states used for a socket */
 struct lwip_sock {
   /** sockets currently are built on netconns, each socket has one netconn */
@@ -245,6 +247,7 @@ struct lwip_sock {
   /** counter of how many threads are waiting for this socket using select */
   SELWAIT_T select_waiting;
 };
+#endif
 
 #if ESP_THREAD_SAFE
 
@@ -3549,5 +3552,27 @@ lwip_shutdown_r(int s, int how)
 }
 
 #endif
+
+struct lwip_sock* lwip_socket_debug_get_socket(int fd)
+{
+    struct lwip_sock *sock = get_socket(fd);
+
+    if (sock && sock->lock) {
+        LWIP_SOCK_LOCK(sock);
+        if (sock->ref != 0) {
+            return sock;
+        }
+
+        LWIP_SOCK_UNLOCK(sock);
+        return NULL;
+    } else {
+        return NULL;
+    }
+}
+
+void lwip_socket_debug_done_socket(struct lwip_sock *sock)
+{
+    LWIP_SOCK_UNLOCK(sock);
+}
 
 #endif /* LWIP_SOCKET */
