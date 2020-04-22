@@ -639,6 +639,7 @@ igmp_leavegroup_netif(struct netif *netif, const ip4_addr_t *groupaddr)
   }
 }
 
+#if ESP_LWIP_IGMP_TIMERS_ONDEMAND
 /**
  * Wrapper function with matching prototype which calls the actual callback
  */
@@ -648,6 +649,7 @@ static void igmp_timeout_cb(void *arg)
 
   igmp_tmr();
 }
+#endif
 /**
  * The igmp timer function (both for NO_SYS=1 and =0)
  * Should be called every IGMP_TMR_INTERVAL milliseconds (100 ms is default).
