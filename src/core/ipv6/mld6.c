@@ -490,6 +490,7 @@ mld6_leavegroup_netif(struct netif *netif, const ip6_addr_t *groupaddr)
   return ERR_VAL;
 }
 
+#if ESP_LWIP_MLD6_TIMERS_ONDEMAND
 /**
  * Wrapper function with matching prototype which calls the actual callback
  */
@@ -499,6 +500,7 @@ static void mld6_timeout_cb(void *arg)
 
   mld6_tmr();
 }
+#endif
 
 /**
  * Periodic timer for mld processing. Must be called every
