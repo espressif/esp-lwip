@@ -1263,6 +1263,8 @@ ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
   if (netif_mtu6(netif) && (p->tot_len > nd6_get_destination_mtu(dest, netif))) {
     return ip6_frag(p, netif, dest);
   }
+#else
+  LWIP_ERROR("ip6_output_if: Packet larger than MTU discarded", !(netif->mtu && p->tot_len > netif->mtu), return ERR_IF;);
 #endif /* LWIP_IPV6_FRAG */
 
   LWIP_DEBUGF(IP6_DEBUG, ("netif->output_ip6()\n"));
