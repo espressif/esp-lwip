@@ -65,6 +65,10 @@
 /* These variables are global to all functions involved in the input
    processing of TCP segments. They are set by the tcp_input()
    function. */
+#ifndef ESP_N0_LOG
+#include "esp_log.h"   
+const static char *TAG = "lwip";
+#endif
 static struct tcp_seg inseg;
 static struct tcp_hdr *tcphdr;
 static u16_t tcphdr_optlen;
@@ -1502,7 +1506,18 @@ tcp_receive(struct tcp_pcb *pcb)
 
           cseg = pcb->ooseq;
           seqno = pcb->ooseq->tcphdr->seqno;
-
+#if ESP_LWIP
+          if (pcb->rcv_wnd < TCP_TCPLEN(cseg)) {
+              ESP_LOGW(TAG,"rx_oow,s=%u,w=%u,l=%u,n=%u,l1=%u,l2=%u,f=%x,tf=%d",seqno,pcb->rcv_wnd,cseg->len,pcb->rcv_nxt,pcb->snd_wl1,pcb->snd_wl2,TCPH_FLAGS((cseg)->tcphdr),pcb->flags);
+              cseg->len = pcb->rcv_wnd;
+              if(TCPH_FLAGS((cseg)->tcphdr) & TCP_SYN) {
+                cseg->len -= 1;
+              } 
+              pbuf_realloc(cseg->p, cseg->len);
+              tcp_segs_free(cseg->next);
+              cseg->next = NULL;
+            }
+#endif
           pcb->rcv_nxt += TCP_TCPLEN(cseg);
           LWIP_ASSERT("tcp_receive: ooseq tcplen > rcv_wnd\n",
                       pcb->rcv_wnd >= TCP_TCPLEN(cseg));

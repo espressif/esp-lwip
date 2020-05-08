@@ -34,6 +34,8 @@ limitations under the License.
 #define ESP_IRAM_ATTR                   
 #define ESP_RANDOM_TCP_PORT                     0 
 #define ESP_GRATUITOUS_ARP                      1
+#define ESP_N0_LOG
+#define ESP_LOGW( tag, format, ... )
 
 #include "../lwipopts.h"
 
