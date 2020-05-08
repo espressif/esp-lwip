@@ -20,6 +20,7 @@ limitations under the License.
 #define SNTP_SERVER_DNS                 0
 #define LWIP_HAVE_LOOPIF                1
 #define LWIP_NETIF_HOSTNAME             1
+#define TCP_OOSEQ_DEBUG LWIP_DBG_ON
 
 /* ESP specific cofiguration */
 #define ESP_LWIP                                1
