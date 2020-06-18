@@ -104,6 +104,7 @@
 #define ESP_LWIP_MLD6_TIMERS_ONDEMAND           1
 #define ESP_LWIP_DNS_TIMERS_ONDEMAND            1
 #define ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND 1
+#define ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND 1
 #define ESP_GRATUITOUS_ARP                      1
 #define ESP_LWIP_SELECT                         1
 #define ESP_LWIP_LOCK                           1
@@ -113,7 +114,6 @@
 #define ESP_DHCP_DISABLE_CLIENT_ID              0
 #define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 0
 #define ESP_IP_FORWARD                          1
-
 
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16

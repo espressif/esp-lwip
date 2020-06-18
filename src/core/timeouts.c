@@ -85,7 +85,7 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
   {TCP_TMR_INTERVAL, HANDLER(tcp_tmr)},
 #endif /* LWIP_TCP */
 #if LWIP_IPV4
-#if IP_REASSEMBLY
+#if IP_REASSEMBLY && !ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
   {IP_TMR_INTERVAL, HANDLER(ip_reass_tmr)},
 #endif /* IP_REASSEMBLY */
 #if LWIP_ARP
