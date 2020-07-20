@@ -2095,6 +2095,12 @@ nd6_queue_packet(s8_t neighbor_index, struct pbuf *q)
   if (copy_needed) {
     /* copy the whole packet into new pbufs */
     p = pbuf_clone(PBUF_LINK, PBUF_RAM, q);
+#if ESP_ND6_QUEUEING
+    if(p == NULL) {
+      pbuf_free(q);
+      return ERR_MEM;
+    }
+#else
     while ((p == NULL) && (neighbor_cache[neighbor_index].q != NULL)) {
       /* Free oldest packet (as per RFC recommendation) */
 #if LWIP_ND6_QUEUEING
@@ -2108,6 +2114,7 @@ nd6_queue_packet(s8_t neighbor_index, struct pbuf *q)
 #endif /* LWIP_ND6_QUEUEING */
       p = pbuf_clone(PBUF_LINK, PBUF_RAM, q);
     }
+#endif
   } else {
     /* referencing the old pbuf is enough */
     p = q;
@@ -2128,19 +2135,31 @@ nd6_queue_packet(s8_t neighbor_index, struct pbuf *q)
       new_entry = (struct nd6_q_entry *)memp_malloc(MEMP_ND6_QUEUE);
     }
     if (new_entry != NULL) {
+      unsigned int qlen = 0;
       new_entry->next = NULL;
       new_entry->p = p;
       if (neighbor_cache[neighbor_index].q != NULL) {
         /* queue was already existent, append the new entry to the end */
         r = neighbor_cache[neighbor_index].q;
+        qlen++;
         while (r->next != NULL) {
           r = r->next;
+          qlen++;
         }
         r->next = new_entry;
       } else {
         /* queue did not exist, first item in queue */
         neighbor_cache[neighbor_index].q = new_entry;
       }
+#if ESP_ND6_QUEUEING
+      if (qlen >= MEMP_NUM_ND6_QUEUE) {
+        r->next = NULL;
+        pbuf_free(new_entry->p);
+        memp_free(MEMP_ND6_QUEUE, new_entry);
+        LWIP_DEBUGF(LWIP_DBG_TRACE, ("ipv6: could not queue the packet %p (queue is full)\n", (void *)q));
+        return ERR_MEM;
+      }
+#endif
       LWIP_DEBUGF(LWIP_DBG_TRACE, ("ipv6: queued packet %p on neighbor entry %"S16_F"\n", (void *)p, (s16_t)neighbor_index));
       result = ERR_OK;
     } else {
