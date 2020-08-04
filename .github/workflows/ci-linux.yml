@@ -48,8 +48,9 @@ jobs:
       run: |
         cp ${CONTRIB}/examples/example_app/lwipcfg.h.example ${CONTRIB}/examples/example_app/lwipcfg.h
         cd ${CONTRIB}/ports/unix/example_app
-        export CFLAGS="-DESP_LWIP=LWIP_NETCONN_FULLDUPLEX -DESP_LWIP_IGMP_TIMERS_ONDEMAND=ESP_LWIP -DESP_LWIP_MLD6_TIMERS_ONDEMAND=ESP_LWIP -DESP_DNS=ESP_LWIP"
+        export CFLAGS="-DESP_LWIP=LWIP_NETCONN_FULLDUPLEX -DESP_LWIP_IGMP_TIMERS_ONDEMAND=ESP_LWIP -DESP_LWIP_MLD6_TIMERS_ONDEMAND=ESP_LWIP -DESP_DNS=ESP_LWIP -DESP_LWIP_ARP=ESP_LWIP"
         export LWIPDIR=../../../../src/
+        make TESTFLAGS="-Wno-documentation" -j 4
         chmod +x iteropts.sh && ./iteropts.sh
 
     - name: Build and run unit tests with cmake
