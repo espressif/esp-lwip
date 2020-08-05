@@ -504,7 +504,7 @@ pbuf_realloc(struct pbuf *p, u16_t new_len)
 {
   struct pbuf *q;
   u16_t rem_len; /* remaining length */
-  s32_t grow;
+  u16_t shrink;
 
   LWIP_ASSERT("pbuf_realloc: p != NULL", p != NULL);
   LWIP_ASSERT("pbuf_realloc: sane p->type", p->type == PBUF_POOL ||
@@ -520,7 +520,7 @@ pbuf_realloc(struct pbuf *p, u16_t new_len)
 
   /* the pbuf chain grows by (new_len - p->tot_len) bytes
    * (which may be negative in case of shrinking) */
-  grow = new_len - p->tot_len;
+  shrink = (u16_t)(p->tot_len - new_len);
 
   /* first, step over any pbufs that should remain in the chain */
   rem_len = new_len;
@@ -530,8 +530,7 @@ pbuf_realloc(struct pbuf *p, u16_t new_len)
     /* decrease remaining length by pbuf length */
     rem_len -= q->len;
     /* decrease total length indicator */
-    LWIP_ASSERT("grow < max_u16_t", grow < 0xffff);
-    q->tot_len += (u16_t)grow;
+    q->tot_len = (u16_t)(q->tot_len - shrink);
     /* proceed to next pbuf in chain */
     q = q->next;
     LWIP_ASSERT("pbuf_realloc: q != NULL", q != NULL);
