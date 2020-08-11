@@ -38,6 +38,7 @@
 
 #define LWIP_IPV4                  1
 #define LWIP_IPV6                  0
+#define LWIP_IPV6_REASS            0
 
 #define NO_SYS                     0
 #define LWIP_SOCKET                (NO_SYS==0)
@@ -300,6 +301,9 @@ void sys_thread_sem_deinit(void);
 #if IP_REASSEMBLY
 #define ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND 1
 #endif /* IP_REASSEMBLY */
+#if LWIP_IPV6_REASS
+#define ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND 1
+#endif /* LWIP_IPV6_REASS */
 #define ESP_DNS 1
 #define ESP_LWIP_ARP 1
 #define LWIP_AUTOIP_MAX_CONFLICTS        10
