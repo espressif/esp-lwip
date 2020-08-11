@@ -295,6 +295,7 @@ void sys_thread_sem_deinit(void);
 
 #define ESP_LWIP_IGMP_TIMERS_ONDEMAND 1
 #define ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND 1
+#define ESP_LWIP_DNS_TIMERS_ONDEMAND  1
 #define ESP_LWIP_MLD6_TIMERS_ONDEMAND 1
 #define ESP_DNS 1
 #define ESP_LWIP_ARP 1

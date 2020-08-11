@@ -161,6 +161,7 @@ u32_t esp_random(void);
 #define ESP_LWIP_IGMP_TIMERS_ONDEMAND           1
 #define ESP_LWIP_MLD6_TIMERS_ONDEMAND           1
 #define ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND      1
+#define ESP_LWIP_DNS_TIMERS_ONDEMAND            1
 
 #else
 #define ESP_LWIP                                0
@@ -170,6 +171,10 @@ u32_t esp_random(void);
 
 #ifndef ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
 #define ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND      0
+#endif
+
+#ifndef ESP_LWIP_DNS_TIMERS_ONDEMAND
+#define ESP_LWIP_DNS_TIMERS_ONDEMAND            0
 #endif
 
 #endif /* ESP_LWIP */
