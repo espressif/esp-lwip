@@ -176,7 +176,7 @@ ip_napt_enable(u32_t addr, int enable)
   for (netif = netif_list; netif; netif = netif->next) {
     if (netif->napt)
       napt_in_any_netif = 1;
-    if (netif_is_up(netif) && !ip_addr_isany(&netif->ip_addr) && netif->ip_addr.u_addr.ip4.addr == addr && enable) {
+    if (netif_is_up(netif) && !ip_addr_isany(&netif->ip_addr) && netif->ip_addr.addr == addr && enable) {
       netif->napt = 1;
       ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
       break;
@@ -695,7 +695,7 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
       /* register src addr and iecho->id and dest info */
       ip_napt_add(IP_PROTO_ICMP, iphdr->src.addr, iecho->id, iphdr->dest.addr, iecho->id);
 
-      ip_napt_modify_addr(iphdr, &iphdr->src, outp->ip_addr.u_addr.ip4.addr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, outp->ip_addr.addr);
     }
 
     return ERR_OK;
@@ -742,8 +742,8 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
 
     if (mport != tcphdr->src)
       ip_napt_modify_port_tcp(tcphdr, 0, mport);
-    ip_napt_modify_addr_tcp(tcphdr, &iphdr->src, outp->ip_addr.u_addr.ip4.addr);
-    ip_napt_modify_addr(iphdr, &iphdr->src, outp->ip_addr.u_addr.ip4.addr);
+    ip_napt_modify_addr_tcp(tcphdr, &iphdr->src, outp->ip_addr.addr);
+    ip_napt_modify_addr(iphdr, &iphdr->src, outp->ip_addr.addr);
 
     return ERR_OK;
   }
@@ -783,8 +783,8 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
 
     if (mport != udphdr->src)
       ip_napt_modify_port_udp(udphdr, 0, mport);
-    ip_napt_modify_addr_udp(udphdr, &iphdr->src, outp->ip_addr.u_addr.ip4.addr);
-    ip_napt_modify_addr(iphdr, &iphdr->src, outp->ip_addr.u_addr.ip4.addr);
+    ip_napt_modify_addr_udp(udphdr, &iphdr->src, outp->ip_addr.addr);
+    ip_napt_modify_addr(iphdr, &iphdr->src, outp->ip_addr.addr);
     return ERR_OK;
   }
 #endif
