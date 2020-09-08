@@ -1681,6 +1681,11 @@ tcp_receive(struct tcp_pcb *pcb)
                     }
                     /* Adjust length of segment to fit in the window. */
                     next->next->len = (u16_t)(pcb->rcv_nxt + pcb->rcv_wnd - seqno);
+#if ESP_LWIP
+                    if (TCPH_FLAGS(next->next->tcphdr) & TCP_SYN) {
+                      next->next->len -= 1;
+                    }
+#endif
                     pbuf_realloc(next->next->p, next->next->len);
                     tcplen = TCP_TCPLEN(next->next);
 #if ESP_LWIP
