@@ -1010,6 +1010,14 @@ tcp_oos_insert_segment(struct tcp_seg *cseg, struct tcp_seg *next)
 }
 #endif /* TCP_QUEUE_OOSEQ */
 
+/* add debug function */
+
+static void _tcp_assert(u32_t seqno, u32_t rcv_wnd, u32_t len, u32_t rcv_nxt, u16_t next_flags, u8_t flags)
+{
+    ets_printf("seqno %lu, pcb->rcv_wnd %d, next->next->len %d, pcb->rcv_nxt %lu,TCPH_FLAGS(next->next->tcphdr)  %d, pcb->flags   %d\n\n",\
+                seqno, rcv_wnd , len, rcv_nxt ,next_flags, flags);\
+    *((int *)0) = 0;
+}
 /**
  * Called by tcp_process. Checks if the given segment is an ACK for outstanding
  * data, and if so frees the memory of the buffered data. Next, it places the
@@ -1394,7 +1402,6 @@ tcp_receive(struct tcp_pcb *pcb)
            we have to trim the end of the segment and update rcv_nxt
            and pass the data to the application. */
         tcplen = TCP_TCPLEN(&inseg);
-
         if (tcplen > pcb->rcv_wnd) {
           LWIP_DEBUGF(TCP_INPUT_DEBUG,
                       ("tcp_receive: other end overran receive window"
@@ -1676,6 +1683,11 @@ tcp_receive(struct tcp_pcb *pcb)
                     next->next->len = (u16_t)(pcb->rcv_nxt + pcb->rcv_wnd - seqno);
                     pbuf_realloc(next->next->p, next->next->len);
                     tcplen = TCP_TCPLEN(next->next);
+#if ESP_LWIP
+                    if((seqno + tcplen) != (pcb->rcv_nxt + pcb->rcv_wnd)) {
+                      _tcp_assert(seqno, pcb->rcv_wnd , next->next->len, pcb->rcv_nxt ,TCPH_FLAGS(next->next->tcphdr), pcb->flags);
+                    }
+#endif /*ESP_LWIP*/
                     LWIP_ASSERT("tcp_receive: segment not trimmed correctly to rcv_wnd\n",
                                 (seqno + tcplen) == (pcb->rcv_nxt + pcb->rcv_wnd));
                   }
