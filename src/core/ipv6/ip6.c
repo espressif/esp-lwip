@@ -65,6 +65,26 @@
 #endif
 
 /**
+ * This is an alternative way of declaring LWIP_HOOK_IP6_ROUTE.
+ * By default it links this weak function that is a no-op,
+ * but you can declare your own (without weak attribute) and
+ * override it during linking.
+ * 
+ * See https://en.wikipedia.org/wiki/Weak_symbol for more details on this mechanism.
+ * 
+ * @param src the source IPv6 address, if known
+ * @param dest the destination IPv6 address for which to find the route
+ * @return the netif on which to send to reach dest
+ */
+struct  netif* __weak
+lwip_hook_ip6_route(const ip6_addr_t *dest, const ip6_addr_t *src)
+{
+  LWIP_UNUSED_ARG(dest);
+  LWIP_UNUSED_ARG(src);
+  return NULL;
+}
+
+/**
  * Finds the appropriate network interface for a given IPv6 address. It tries to select
  * a netif following a sequence of heuristics:
  * 1) if there is only 1 netif, return it
@@ -186,6 +206,11 @@ ip6_route(const ip6_addr_t *src, const ip6_addr_t *dest)
     return netif;
   }
 #endif
+
+  netif = lwip_hook_ip6_route(src, dest);
+  if (netif != NULL) {
+    return netif;
+  }
 
   /* See if the destination subnet matches a configured address. In accordance
    * with RFC 5942, dynamically configured addresses do not have an implied

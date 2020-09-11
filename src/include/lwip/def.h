@@ -149,4 +149,7 @@ char* lwip_strnstr(const char* buffer, const char* token, size_t n);
 }
 #endif
 
+/* Provide an alias for non-standard attribute in case one needs to redefine it */
+#define __weak __attribute__((weak))
+
 #endif /* LWIP_HDR_DEF_H */
