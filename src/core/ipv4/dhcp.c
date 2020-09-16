@@ -542,6 +542,11 @@ dhcp_timeout(struct netif *netif)
       dhcp_discover(netif);
     }
   }
+#if ESP_DHCP
+  else if (dhcp->state == DHCP_STATE_REBINDING) {
+    dhcp->t2_rebind_time = 1;
+  }
+#endif
 }
 
 /**
