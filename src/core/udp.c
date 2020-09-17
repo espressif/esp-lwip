@@ -587,13 +587,6 @@ udp_sendto_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *dst_ip,
             netif = ip4_route_src(ip_2_ip4(&pcb->local_ip), &pcb->mcast_ip4);
           }
         }
-#if LWIP_IPV6
-#if ESP_LWIP      
-        else if (IP_IS_V6(dst_ip)) {
-            dst_ip =&pcb->local_ip;
-        }
-#endif /* ESP_LWIP */
-#endif /* LWIP_IPV6 */
 #endif /* LWIP_IPV4 */
     }
 
