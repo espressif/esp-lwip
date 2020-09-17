@@ -174,7 +174,15 @@ ip6_route(const ip6_addr_t *src, const ip6_addr_t *dest)
     }
     /* Again, do not use any other netif in this case, as that could result in
      * zone boundary violations. */
+#if ESP_LWIP
+    if (ip6_addr_ismulticast(dest) || ip6_addr_isany(src)) { 
+      return netif_default;
+    } else {
+      return NULL;
+    }
+#else
     return NULL;
+#endif /* ESP_LWIP */
   }
 
   /* We come here only if neither source nor destination is scoped. */
