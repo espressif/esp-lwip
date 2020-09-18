@@ -616,7 +616,11 @@ ip4_input(struct pbuf *p, struct netif *inp)
    */
   if (netif == NULL) {
     /* remote port is DHCP server? */
+#if ESP_LWIP
+    if ((IPH_PROTO(iphdr) == IP_PROTO_UDP) && (iphdr_len > iphdr_hlen + UDP_HLEN)) {
+#else
     if (IPH_PROTO(iphdr) == IP_PROTO_UDP) {
+#endif /* ESP_LWIP */
       struct udp_hdr *udphdr = (struct udp_hdr *)((u8_t *)iphdr + iphdr_hlen);
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_TRACE, ("ip4_input: UDP packet to DHCP client port %"U16_F"\n",
         lwip_ntohs(udphdr->dest)));
