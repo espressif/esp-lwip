@@ -544,9 +544,9 @@ slipif_received_byte(struct netif *netif, u8_t data)
  * @param len Number of received characters
  */
 void
-slipif_received_bytes(struct netif *netif, u8_t *data, u8_t len)
+slipif_received_bytes(struct netif *netif, u8_t *data, u32_t len)
 {
-  u8_t i;
+  u32_t i;
   u8_t *rxdata = data;
   LWIP_ASSERT("netif != NULL", (netif != NULL));
   LWIP_ASSERT("netif->state != NULL", (netif->state != NULL));
