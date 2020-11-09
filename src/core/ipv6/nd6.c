@@ -453,6 +453,12 @@ nd6_input(struct pbuf *p, struct netif *inp)
 
     /* Offset to options. */
     offset = sizeof(struct ra_header);
+#ifdef ESP_LWIP
+    if (offset > p->tot_len) {
+        /* integer underflow can occur */
+        goto lenerr_drop_free_return;
+    }
+#endif
 
     /* Process each option. */
     while ((p->tot_len - offset) > 0) {
@@ -547,7 +553,17 @@ nd6_input(struct pbuf *p, struct netif *inp)
         u8_t num, n;
         struct rdnss_option * rdnss_opt;
 
+#ifdef ESP_LWIP
+        if (p->len < 8) {
+            goto lenerr_drop_free_return;
+        }
+#endif
         rdnss_opt = (struct rdnss_option *)buffer;
+#ifdef ESP_LWIP
+        if (p->len < rdnss_opt->length << 3 || rdnss_opt->length <= 0){
+            goto lenerr_drop_free_return;
+        }
+#endif
         num = (rdnss_opt->length - 1) / 2;
         for (n = 0; (rdnss_server_idx < DNS_MAX_SERVERS) && (n < num); n++) {
           ip_addr_t rdnss_address;
@@ -577,6 +593,13 @@ nd6_input(struct pbuf *p, struct netif *inp)
         ND6_STATS_INC(nd6.proterr);
         break;
       }
+#ifdef ESP_LWIP
+      /* ensure offset does not overflow */
+      u32_t overflow = offset + 8 * ((u16_t)buffer[1]);
+      if (overflow > UINT16_MAX) {
+          goto lenerr_drop_free_return;
+      }
+#endif
       /* option length is checked earlier to be non-zero to make sure loop ends */
       offset += 8 * ((u16_t)buffer[1]);
     }
@@ -700,6 +723,14 @@ nd6_input(struct pbuf *p, struct netif *inp)
   }
 
   pbuf_free(p);
+#ifdef ESP_LWIP
+  return;
+
+lenerr_drop_free_return:
+  ND6_STATS_INC(nd6.lenerr);
+  ND6_STATS_INC(nd6.drop);
+  pbuf_free(p);
+#endif
 }
 
 #ifdef ESP_LWIP
