@@ -1575,7 +1575,23 @@ tcp_receive(struct tcp_pcb *pcb)
 
           struct tcp_seg *cseg = pcb->ooseq;
           seqno = pcb->ooseq->tcphdr->seqno;
-
+#if ESP_LWIP
+          if (pcb->rcv_wnd < TCP_TCPLEN(cseg)) {
+            LWIP_DEBUGF(TCP_OOSEQ_DEBUG,
+                      ("tcp_receive: OOSEQ packet out of wnd "
+                       "seqno=%"U32_F" wnd =%"U32_F" len=%"U16_F"\
+                        snd_wl1=%"U32_F" snd_wl2 =%"U32_F" f = %"X16_F" tf=%"U16_F"\n",
+                        seqno,pcb->rcv_wnd,cseg->len,pcb->snd_wl1,pcb->snd_wl1,\
+                        TCPH_FLAGS((cseg)->tcphdr),pcb->flags));
+              cseg->len = pcb->rcv_wnd;
+              if((TCPH_FLAGS((cseg)->tcphdr) & TCP_SYN) || (TCPH_FLAGS((cseg)->tcphdr) & TCP_FIN)) {
+                cseg->len -= 1;
+              }
+              pbuf_realloc(cseg->p, cseg->len);
+              tcp_segs_free(cseg->next);
+              cseg->next = NULL;
+            }
+#endif
           pcb->rcv_nxt += TCP_TCPLEN(cseg);
           LWIP_ASSERT("tcp_receive: ooseq tcplen > rcv_wnd\n",
                       pcb->rcv_wnd >= TCP_TCPLEN(cseg));
@@ -1780,6 +1796,17 @@ tcp_receive(struct tcp_pcb *pcb)
                     }
                     /* Adjust length of segment to fit in the window. */
                     next->next->len = (u16_t)(pcb->rcv_nxt + pcb->rcv_wnd - seqno);
+#if ESP_LWIP
+                    if (TCPH_FLAGS(next->next->tcphdr) & TCP_SYN) {
+                      LWIP_DEBUGF(TCP_OOSEQ_DEBUG,
+                                  ("tcp_receive: ooseq not trimmed correctly to rcv_wnd "
+                                  "seqno=%"U32_F" wnd =%"U32_F" len=%"U16_F"\
+                                   snd_wl1=%"U32_F" snd_wl2 =%"U32_F" f = %"X16_F" tf=%"U16_F"\n",
+                                   seqno,pcb->rcv_wnd,next->next->len,pcb->snd_wl1,pcb->snd_wl1,\
+                                   TCPH_FLAGS(next->next->tcphdr),pcb->flags));
+                      next->next->len -= 1;
+                    }
+#endif
                     pbuf_realloc(next->next->p, next->next->len);
                     tcplen = TCP_TCPLEN(next->next);
                     LWIP_ASSERT("tcp_receive: segment not trimmed correctly to rcv_wnd\n",

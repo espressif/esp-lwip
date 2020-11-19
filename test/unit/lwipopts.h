@@ -101,6 +101,7 @@
 #define ESP_GRATUITOUS_ARP                      1
 #define ESP_LWIP_SELECT                         1
 #define ESP_LWIP_LOCK                           1
+#define TCP_OOSEQ_DEBUG                         LWIP_DBG_ON
 
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
