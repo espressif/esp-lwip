@@ -497,7 +497,11 @@ slipif_rxbyte_enqueue(struct netif *netif, u8_t data)
     if (priv->rxpackets != NULL) {
 #if SLIP_RX_QUEUE
       /* queue multiple pbufs */
+#if ESP_LWIP
+      struct pbuf *q = priv->rxpackets;
+#else
       struct pbuf *q = p;
+#endif
       while (q->next != NULL) {
         q = q->next;
       }
