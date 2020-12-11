@@ -1517,7 +1517,7 @@ tcp_receive(struct tcp_pcb *pcb)
           if (pcb->rcv_wnd < TCP_TCPLEN(cseg)) {
               ESP_LOGW(TAG,"rx_oow,s=%u,w=%u,l=%u,n=%u,l1=%u,l2=%u,f=%x,tf=%d",seqno,pcb->rcv_wnd,cseg->len,pcb->rcv_nxt,pcb->snd_wl1,pcb->snd_wl2,TCPH_FLAGS((cseg)->tcphdr),pcb->flags);
               cseg->len = pcb->rcv_wnd;
-              if(TCPH_FLAGS((cseg)->tcphdr) & TCP_SYN) {
+              if((TCPH_FLAGS((cseg)->tcphdr) & TCP_SYN) || (TCPH_FLAGS((cseg)->tcphdr) & TCP_FIN)) {
                 cseg->len -= 1;
               } 
               pbuf_realloc(cseg->p, cseg->len);
