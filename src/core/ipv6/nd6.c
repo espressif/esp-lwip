@@ -204,12 +204,7 @@ nd6_input(struct pbuf *p, struct netif *inp)
 
       lladdr_opt = (struct lladdr_option *)((u8_t*)p->payload + sizeof(struct na_header));
 
-#ifdef ESP_LWIP
-      if (p->len < (sizeof(struct na_header) + (lladdr_opt->length << 3)) || (lladdr_opt->length < 2)
-        || (lladdr_opt->length - 2) << 3 < inp->hwaddr_len) {
-#else
       if (p->len < (sizeof(struct na_header) + (lladdr_opt->length << 3))) {
-#endif
         /* @todo debug message */
         pbuf_free(p);
         ND6_STATS_INC(nd6.lenerr);
@@ -256,12 +251,7 @@ nd6_input(struct pbuf *p, struct netif *inp)
 
         lladdr_opt = (struct lladdr_option *)((u8_t*)p->payload + sizeof(struct na_header));
 
-#ifdef ESP_LWIP
-      if (p->len < (sizeof(struct na_header) + (lladdr_opt->length << 3)) || (lladdr_opt->length < 2)
-        || (lladdr_opt->length - 2) << 3 < inp->hwaddr_len) {
-#else
         if (p->len < (sizeof(struct na_header) + (lladdr_opt->length << 3))) {
-#endif
           /* @todo debug message */
           pbuf_free(p);
           ND6_STATS_INC(nd6.lenerr);
@@ -298,18 +288,13 @@ nd6_input(struct pbuf *p, struct netif *inp)
       ND6_STATS_INC(nd6.drop);
       return;
     }
+
     ns_hdr = (struct ns_header *)p->payload;
 
     /* Check if there is a link-layer address provided. Only point to it if in this buffer. */
     if (p->len >= (sizeof(struct ns_header) + 2)) {
       lladdr_opt = (struct lladdr_option *)((u8_t*)p->payload + sizeof(struct ns_header));
-#ifdef ESP_LWIP
-      if (p->len < (sizeof(struct na_header) + (lladdr_opt->length << 3)) || (lladdr_opt->length < 2)
-        || (lladdr_opt->length - 2) << 3 < inp->hwaddr_len) {
-#else
       if (p->len < (sizeof(struct ns_header) + (lladdr_opt->length << 3))) {
-
-#endif
         lladdr_opt = NULL;
       }
     } else {
@@ -640,12 +625,7 @@ nd6_input(struct pbuf *p, struct netif *inp)
 
     if (p->len >= (sizeof(struct redirect_header) + 2)) {
       lladdr_opt = (struct lladdr_option *)((u8_t*)p->payload + sizeof(struct redirect_header));
-#ifdef ESP_LWIP
-      if (p->len < (sizeof(struct na_header) + (lladdr_opt->length << 3)) || (lladdr_opt->length < 2)
-        || (lladdr_opt->length - 2) << 3 < inp->hwaddr_len) {
-#else
       if (p->len < (sizeof(struct redirect_header) + (lladdr_opt->length << 3))) {
-#endif
         lladdr_opt = NULL;
       }
     } else {
