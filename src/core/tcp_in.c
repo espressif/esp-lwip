@@ -541,6 +541,8 @@ tcp_input(struct pbuf *p, struct netif *inp)
             TCP_EVENT_CLOSED(pcb, err);
             if (err == ERR_ABRT) {
               goto aborted;
+            } else if (err == ERR_MEM) {
+                tcp_set_flags(pcb, TF_CLOSEPEND);
             }
           }
         }
