@@ -103,6 +103,7 @@
 #define ESP_LWIP_LOCK                           1
 #define TCP_OOSEQ_DEBUG                         LWIP_DBG_ON
 #define ESP_DHCP_DEBUG                          1
+#define ESP_THREAD_PROTECTION                   0
 
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16

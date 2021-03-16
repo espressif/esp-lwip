@@ -794,6 +794,11 @@ netconn_alloc(enum netconn_type t, netconn_callback callback)
   conn->callback     = callback;
 #if LWIP_TCP
   conn->current_msg  = NULL;
+
+#if ESP_THREAD_PROTECTION
+  conn->write_protection = false;
+#endif /* ESP_THREAD_PROTECTION */
+
 #endif /* LWIP_TCP */
 #if LWIP_SO_SNDTIMEO
   conn->send_timeout = 0;
@@ -1719,6 +1724,18 @@ lwip_netconn_do_writemore(struct netconn *conn  WRITE_DELAYED_PARAM)
   u8_t apiflags;
   u8_t write_more;
 
+#if ESP_THREAD_PROTECTION
+  if(conn->write_protection == true) {
+    return ERR_OK;
+  }
+  TCP_WRITE_LOCK(conn);
+
+  if (conn->state != NETCONN_WRITE) {
+    TCP_WRITE_UNLOCK(conn);
+    return ERR_OK;
+  }
+#endif /* ESP_THREAD_PROTECTION */
+
   LWIP_ASSERT("conn != NULL", conn != NULL);
   LWIP_ASSERT("conn->state == NETCONN_WRITE", (conn->state == NETCONN_WRITE));
   LWIP_ASSERT("conn->current_msg != NULL", conn->current_msg != NULL);
@@ -1862,14 +1879,27 @@ err_mem:
     if (delayed)
 #endif
     {
+#if ESP_THREAD_PROTECTION
+      TCP_WRITE_UNLOCK(conn);
       sys_sem_signal(op_completed_sem);
+      return ERR_OK;
+#else
+      sys_sem_signal(op_completed_sem);
+#endif /* ESP_THREAD_PROTECTION */
+      
     }
   }
 #if LWIP_TCPIP_CORE_LOCKING
   else {
+#if ESP_THREAD_PROTECTION
+      TCP_WRITE_UNLOCK(conn);
+#endif /*ESP_THREAD_PROTECTION */
     return ERR_MEM;
   }
 #endif
+#if ESP_THREAD_PROTECTION
+  TCP_WRITE_UNLOCK(conn);
+#endif /*ESP_THREAD_PROTECTION */
   return ERR_OK;
 }
 #endif /* LWIP_TCP */
