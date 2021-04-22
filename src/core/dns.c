@@ -1073,8 +1073,8 @@ dns_check_entry(u8_t i)
       entry->tmr = 1;
       entry->retries = 0;
 #if ESP_DNS
-      while((entry->server_idx < DNS_MAX_SERVERS) && ip_addr_isany_val(dns_servers[entry->server_idx])) {
-        entry->server_idx++;
+      while((entry->server_idx + 1 < DNS_MAX_SERVERS) && ip_addr_isany_val(dns_servers[entry->server_idx])) {
+        entry->server_idx ++;
       }
 #endif
       /* send DNS packet for this entry */
