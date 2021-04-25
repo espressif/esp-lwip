@@ -421,7 +421,23 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
     return;
   }
   /* transmit pbuf on chosen interface */
+#if ESP_IP_FORWARD
+  if (p->type_internal == PBUF_REF)
+  {
+      struct pbuf *q = pbuf_clone(PBUF_LINK, PBUF_RAM, p);
+      if (q != NULL) {
+          netif->output(netif, q, ip4_current_dest_addr());
+          pbuf_free(q);
+      } else {
+          MIB2_STATS_INC(mib2.ipinaddrerrors);
+          MIB2_STATS_INC(mib2.ipindiscards);
+      }
+  } else {
+    netif->output(netif, p, ip4_current_dest_addr());
+  }
+#else
   netif->output(netif, p, ip4_current_dest_addr());
+#endif /* ESP_IP_FORWARD */
   return;
 return_noroute:
   MIB2_STATS_INC(mib2.ipoutnoroutes);

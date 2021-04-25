@@ -110,6 +110,8 @@
 #define ESP_THREAD_PROTECTION                   0
 #define ESP_DHCP_DISABLE_CLIENT_ID              0
 #define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 0
+#define ESP_IP_FORWARD                          1
+
 
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
