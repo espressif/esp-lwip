@@ -1129,7 +1129,12 @@ dhcp_discover(struct netif *netif)
 /* Since for embedded devices it's not that hard to miss a discover packet, so lower
    * the discover retry backoff time from (2,4,8,16,32,60,60)s to (500m,1,2,4,8,15,15)s.
    */
+#if CONFIG_IDF_TARGET_ESP32C6
+/* Change discover retry backoff time from (500m,1,2,4,8,15,15)s to (1,2,4,8,16,30,30)s for ESP32C6*/
+  msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 500;
+#else
   msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 250;
+#endif
 #else
   msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000;
 #endif
