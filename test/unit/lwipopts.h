@@ -105,6 +105,7 @@
 #define ESP_DHCP_DEBUG                          1
 #define ESP_THREAD_PROTECTION                   0
 #define ESP_DHCP_DISABLE_CLIENT_ID              0
+#define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 0
 
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
