@@ -567,10 +567,12 @@ static void
 ip_napt_modify_port_udp(struct udp_hdr *udphdr, u8_t dest, u16_t newval)
 {
   if (dest) {
-    checksumadjust((u8_t *)&udphdr->chksum, (u8_t *)&udphdr->dest, 2, (u8_t *)&newval, 2);
+    if (udphdr->chksum != 0)
+      checksumadjust((u8_t *)&udphdr->chksum, (u8_t *)&udphdr->dest, 2, (u8_t *)&newval, 2);
     udphdr->dest = newval;
   } else {
-    checksumadjust((u8_t *)&udphdr->chksum, (u8_t *)&udphdr->src, 2, (u8_t *)&newval, 2);
+    if (udphdr->chksum != 0)
+      checksumadjust((u8_t *)&udphdr->chksum, (u8_t *)&udphdr->src, 2, (u8_t *)&newval, 2);
     udphdr->src = newval;
   }
 }
@@ -578,7 +580,8 @@ ip_napt_modify_port_udp(struct udp_hdr *udphdr, u8_t dest, u16_t newval)
 static void
 ip_napt_modify_addr_udp(struct udp_hdr *udphdr, ip4_addr_p_t *oldval, u32_t newval)
 {
-  checksumadjust( (u8_t *)&udphdr->chksum, (u8_t *)&oldval->addr, 4, (u8_t *)&newval, 4);
+  if (udphdr->chksum != 0)
+    checksumadjust( (u8_t *)&udphdr->chksum, (u8_t *)&oldval->addr, 4, (u8_t *)&newval, 4);
 }
 #endif /* LWIP_UDP */
 
