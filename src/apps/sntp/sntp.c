@@ -525,6 +525,7 @@ sntp_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr,
     /* KOD errors are only processed in case of an explicit poll response */
     if (sntp_opmode == SNTP_OPMODE_POLL) {
       /* Kiss-of-death packet. Use another server or increase UPDATE_DELAY. */
+      sys_untimeout(sntp_request, NULL);
       sntp_try_next_server(NULL);
     }
   } else {
