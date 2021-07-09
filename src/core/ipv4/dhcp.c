@@ -442,6 +442,21 @@ dhcp_select(struct netif *netif)
   return result;
 }
 
+#if ESP_DHCP
+/**
+ * Restarts the DHCP client, typically after the dhcp_release_and_stop()
+ * This is equivalent to dhcp_start(), but preserves the dhcp callback
+ */
+static void
+dhcp_restart(struct netif *netif)
+{
+  struct dhcp *dhcp = netif_dhcp_data(netif);
+  void (*cb)(struct netif*) = dhcp->cb;
+  dhcp_start(netif);
+  dhcp->cb = cb;
+}
+#endif /* ESP_DHCP */
+
 /**
  * The DHCP timer that checks for lease renewal/rebind timeouts.
  * Must be called once a minute (see @ref DHCP_COARSE_TIMER_SECS).
@@ -461,7 +476,11 @@ dhcp_coarse_tmr(void)
         LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_coarse_tmr(): t0 timeout\n"));
         /* this clients' lease time has expired */
         dhcp_release_and_stop(netif);
+#if ESP_DHCP
+        dhcp_restart(netif);
+#else
         dhcp_start(netif);
+#endif /* ESP_DHCP */
         /* timer is active (non zero), and triggers (zeroes) now? */
       } else if (dhcp->t2_rebind_time && (dhcp->t2_rebind_time-- == 1)) {
         LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_coarse_tmr(): t2 timeout\n"));
@@ -533,7 +552,11 @@ dhcp_timeout(struct netif *netif)
     } else {
       LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_timeout(): REQUESTING, releasing, restarting\n"));
       dhcp_release_and_stop(netif);
+#if ESP_DHCP
+      dhcp_restart(netif);
+#else
       dhcp_start(netif);
+#endif /* ESP_DHCP */
     }
 #if DHCP_DOES_ARP_CHECK
     /* received no ARP reply for the offered address (which is good) */
