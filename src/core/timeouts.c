@@ -282,6 +282,15 @@ void sys_timeouts_init(void)
   }
 }
 
+/** Deinitialize this module */
+void sys_timeouts_deinit(void)
+{
+  size_t i;
+  /* tcp_tmr() at index 0 is started on demand */
+  for (i = (LWIP_TCP ? 1 : 0); i < LWIP_ARRAYSIZE(lwip_cyclic_timers); i++) {
+    sys_untimeout(lwip_cyclic_timer, LWIP_CONST_CAST(void *, &lwip_cyclic_timers[i]));
+  }
+}
 /**
  * Create a one-shot timer (aka timeout). Timeouts are processed in the
  * following cases:
