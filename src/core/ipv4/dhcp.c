@@ -2019,9 +2019,11 @@ again:
         LWIP_ERROR("len == 4", len == 4, return ERR_VAL;);
         decode_idx = DHCP_OPTION_IDX_T2;
         break;
+#if ESP_DHCP && !ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER
       case (DHCP_OPTION_VSI):
         decode_idx = DHCP_OPTION_IDX_VSI;
         break;
+#endif
       default:
         decode_len = 0;
         LWIP_DEBUGF(DHCP_DEBUG, ("skipping option %"U16_F" in options\n", (u16_t)op));
