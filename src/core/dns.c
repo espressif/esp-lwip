@@ -383,6 +383,15 @@ dns_setserver(u8_t numdns, const ip_addr_t *dnsserver)
 }
 
 /**
+ * Clears the DNS cache
+ */
+void
+dns_clear_cache(void)
+{
+  memset(dns_table, 0, sizeof(struct dns_table_entry) * DNS_TABLE_SIZE);
+}
+
+/**
  * @ingroup dns
  * Obtain one of the currently configured DNS server.
  *
