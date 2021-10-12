@@ -396,6 +396,12 @@ dns_clear_servers(bool keep_fallback)
     dns_setserver(numdns, NULL);
   }
 }
+
+void
+dns_clear_cache(void)
+{
+  memset(dns_table, 0, sizeof(struct dns_table_entry) * DNS_TABLE_SIZE);
+}
 #endif
 
 /**
