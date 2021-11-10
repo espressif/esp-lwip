@@ -467,7 +467,7 @@ err_tcp(void *arg, err_t err)
   SYS_ARCH_UNPROTECT(lev);
 
   /* Notify the user layer about a connection error. Used to signal select. */
-  API_EVENT(conn, NETCONN_EVT_ERROR, 0);
+  API_EVENT(conn, NETCONN_EVT_ERROR, -1);
   /* Try to release selects pending on 'read' or 'write', too.
      They will get an error if they actually try to read or write. */
   API_EVENT(conn, NETCONN_EVT_RCVPLUS, 0);
@@ -1107,7 +1107,7 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
         conn->pcb.tcp = NULL;
         /* Trigger select() in socket layer. Make sure everybody notices activity
          on the connection, error first! */
-        API_EVENT(conn, NETCONN_EVT_ERROR, 0);
+        API_EVENT(conn, NETCONN_EVT_ERROR, -1);
       }
       if (shut_rx) {
         API_EVENT(conn, NETCONN_EVT_RCVPLUS, 0);
