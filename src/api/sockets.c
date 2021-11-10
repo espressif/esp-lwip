@@ -2608,7 +2608,7 @@ event_callback(struct netconn *conn, enum netconn_evt evt, u16_t len)
       check_waiters = 0;
       break;
     case NETCONN_EVT_ERROR:
-      sock->errevent = 1;
+      sock->errevent = len;
       break;
     default:
       LWIP_ASSERT("unknown event", 0);
@@ -3059,6 +3059,13 @@ lwip_getsockopt_impl(int s, int level, int optname, void *optval, socklen_t *opt
                                       s, *(int *)optval));
           break;
 
+        case SO_EXCEPTION:
+          LWIP_SOCKOPT_CHECK_OPTLEN(sock, *optlen, int);
+          *(int *)optval = sock->errevent;
+          LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_getsockopt(%d, SOL_SOCKET, SO_EXCEPTION) = %d\n",
+                                      s, *(int *)optval));
+          break;
+
 #if LWIP_SO_SNDTIMEO
         case SO_SNDTIMEO:
           LWIP_SOCKOPT_CHECK_OPTLEN_CONN(sock, *optlen, LWIP_SO_SNDRCVTIMEO_OPTTYPE);
@@ -3478,6 +3485,13 @@ lwip_setsockopt_impl(int s, int level, int optname, const void *optval, socklen_
 
           /* SO_TYPE is get-only */
           /* SO_ERROR is get-only */
+
+        case SO_EXCEPTION:
+          LWIP_SOCKOPT_CHECK_OPTLEN_CONN_PCB(sock, optlen, int);
+          LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_setsockopt(%d, SOL_SOCKET, SO_EXCEPTION) = %d\n",
+                                      s, *(const int *)optval));
+          API_EVENT(sock->conn, NETCONN_EVT_ERROR, *(const int *)optval);
+          break;
 
 #if LWIP_SO_SNDTIMEO
         case SO_SNDTIMEO: {
