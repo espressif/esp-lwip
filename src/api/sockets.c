@@ -3064,6 +3064,8 @@ lwip_getsockopt_impl(int s, int level, int optname, void *optval, socklen_t *opt
           *(int *)optval = sock->errevent;
           LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_getsockopt(%d, SOL_SOCKET, SO_EXCEPTION) = %d\n",
                                       s, *(int *)optval));
+          /* Clearing exception */
+          API_EVENT(sock->conn, NETCONN_EVT_ERROR, 0);
           break;
 
 #if LWIP_SO_SNDTIMEO
