@@ -474,6 +474,7 @@ END_TEST
 START_TEST(test_ip4_route_netif_max_napt)
 {
 #define TCP_PORT 2222
+  int i;
   packet_type_t packet_type = PACKET_PBUF_RAM;
   ip4_addr_t addr, src_addr, sta_addr;
   ip4_addr_t netmask;
@@ -499,7 +500,7 @@ START_TEST(test_ip4_route_netif_max_napt)
   /* create packet and send it to the AP */
   IP4_ADDR(&addr, 1, 2, 4, 100);
   IP4_ADDR(&src_addr, 10, 0, 0, 2);
-  for (int i=0; i<IP_NAPT_MAX*2; ++i) {
+  for (i=0; i<IP_NAPT_MAX*2; ++i) {
     random_mock = i;
     p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + i, TCP_PORT + i, TCP_SYN, packet_type);
     send_to_netif(&ap, p);
