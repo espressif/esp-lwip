@@ -474,6 +474,7 @@ END_TEST
 START_TEST(test_ip4_route_netif_max_napt)
 {
 #define TCP_PORT 2222
+  int i;
   packet_type_t packet_type = PACKET_PBUF_RAM;
   ip4_addr_t addr, src_addr, sta_addr;
   ip4_addr_t netmask;

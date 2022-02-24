@@ -390,6 +390,7 @@ dhcp_check(struct netif *netif)
 static void
 dhcp_handle_offer(struct netif *netif, struct dhcp_msg *msg_in)
 {
+  u8_t n;
   struct dhcp *dhcp = netif_dhcp_data(netif);
 
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_handle_offer(netif=%p) %c%c%"U16_F"\n",
