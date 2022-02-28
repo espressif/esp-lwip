@@ -65,7 +65,8 @@ struct napt_table {
   u32_t dest;
   u16_t sport;
   u16_t dport;
-  u16_t mport;
+  u16_t msport;
+  u16_t mdport;
   u8_t proto;
   unsigned int fin1 : 1;
   unsigned int fin2 : 1;
@@ -102,12 +103,16 @@ napt_debug_print(void)
 {
   int i, next;
   LWIP_DEBUGF(NAPT_DEBUG, ("NAPT table:\n"));
-  LWIP_DEBUGF(NAPT_DEBUG, (" src                     dest                    sport   dport   mport   \n"));
-  LWIP_DEBUGF(NAPT_DEBUG, ("+-----------------------+-----------------------+-------+-------+-------+\n"));
+  LWIP_DEBUGF(NAPT_DEBUG, (" proto src                     dest                    sport   dport   msport  mdport \n"));
+  LWIP_DEBUGF(NAPT_DEBUG, ("+-----+-----------------------+-----------------------+-------+-------+-------+-------+\n"));
 
   for (i = napt_list; i != NO_IDX; i = next) {
      struct napt_table *t = &ip_napt_table[i];
      next = t->next;
+
+    if (t->proto == IP_PROTO_TCP) LWIP_DEBUGF(NAPT_DEBUG, ("| TCP "));
+    if (t->proto == IP_PROTO_UDP) LWIP_DEBUGF(NAPT_DEBUG, ("| UDP "));
+    if (t->proto == IP_PROTO_ICMP) LWIP_DEBUGF(NAPT_DEBUG, ("| ICMP"));
 
      LWIP_DEBUGF(NAPT_DEBUG, ("| %3"U16_F" | %3"U16_F" | %3"U16_F" | %3"U16_F" |",
 			      ((const u8_t*) (&t->src))[0],
@@ -121,10 +126,11 @@ napt_debug_print(void)
 			      ((const u8_t*) (&t->dest))[2],
 			      ((const u8_t*) (&t->dest))[3]));
 
-     LWIP_DEBUGF(NAPT_DEBUG, (" %5"U16_F" | %5"U16_F" | %5"U16_F" |\n",
+     LWIP_DEBUGF(NAPT_DEBUG, (" %5"U16_F" | %5"U16_F" | %5"U16_F" | %5"U16_F" |\n",
 			      lwip_htons(t->sport),
 			      lwip_htons(t->dport),
-			      lwip_htons(t->mport)));
+			      lwip_htons(t->msport),
+			      lwip_htons(t->mdport)));
 
   }
 }
@@ -179,6 +185,7 @@ ip_napt_enable(u32_t addr, int enable)
     if (netif_is_up(netif) && !ip_addr_isany(&netif->ip_addr) && (ip_2_ip4(&netif->ip_addr)->addr) == addr && enable) {
       netif->napt = 1;
       ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
+      LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt set to %d on %d\n", netif->napt, netif->num));
       break;
     }
   }
@@ -186,6 +193,7 @@ ip_napt_enable(u32_t addr, int enable)
     for (netif = netif_list; netif; netif = netif->next)
       netif->napt = 0;
     ip_napt_deinit();
+    LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt set to %d on %d\n", netif->napt, netif->num));
   }
 }
 
@@ -200,6 +208,8 @@ ip_napt_enable_no(u8_t number, int enable)
         ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
       else
         ip_napt_deinit();
+
+      LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt set to %d on %d\n", netif->napt, netif->num));
       break;
     }
   }
@@ -300,13 +310,15 @@ ip_napt_free(struct napt_table *t)
 
 #if LWIP_TCP
 static u8_t
-ip_napt_find_port(u8_t proto, u16_t port)
+ip_napt_find_port(u8_t proto, u16_t port, u8_t dest)
 {
   int i, next;
   for (i = napt_list; i != NO_IDX; i = next) {
     struct napt_table *t = &ip_napt_table[i];
     next = t->next;
-    if (t->proto == proto && t->mport == port)
+    if (dest && t->proto == proto && t->mdport == port)
+      return 1;
+    if (!dest && t->proto == proto && t->msport == port)
       return 1;
   }
   return 0;
@@ -346,12 +358,12 @@ static u16_t
 ip_napt_new_port(u8_t proto, u16_t port)
 {
   if (PP_NTOHS(port) >= IP_NAPT_PORT_RANGE_START && PP_NTOHS(port) <= IP_NAPT_PORT_RANGE_END)
-    if (!ip_napt_find_port(proto, port) && !tcp_listening(port))
+    if (!ip_napt_find_port(proto, port, 1) && !tcp_listening(port))
       return port;
   for (;;) {
     port = PP_HTONS(IP_NAPT_PORT_RANGE_START +
                     LWIP_RAND() % (IP_NAPT_PORT_RANGE_END - IP_NAPT_PORT_RANGE_START + 1));
-    if (ip_napt_find_port(proto, port))
+    if (ip_napt_find_port(proto, port, 1))
       continue;
 #if LWIP_TCP
     if (proto == IP_PROTO_TCP && tcp_listening(port))
@@ -409,13 +421,14 @@ ip_napt_find(u8_t proto, u32_t addr, u16_t port, u16_t mport, u8_t dest)
       continue;
     }
 #endif
-    if (dest == 0 && t->proto == proto && t->src == addr && t->sport == port) {
+    if (dest == 0 && t->proto == proto && t->src == addr && t->sport == port
+        && t->msport == mport) {
       t->last = now;
       LWIP_DEBUGF(NAPT_DEBUG, ("found\n"));
       return t;
     }
     if (dest == 1 && t->proto == proto && t->dest == addr && t->dport == port
-        && t->mport == mport) {
+        && t->mdport == mport) {
       t->last = now;
       LWIP_DEBUGF(NAPT_DEBUG, ("found\n"));
       return t;
@@ -427,9 +440,9 @@ ip_napt_find(u8_t proto, u32_t addr, u16_t port, u16_t mport, u8_t dest)
 }
 
 static u16_t
-ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport)
+ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport, u16_t msport)
 {
-  struct napt_table *t = ip_napt_find(proto, src, sport, 0, 0);
+  struct napt_table *t = ip_napt_find(proto, src, sport, msport, 0);
   if (t) {
     t->last = sys_now();
     t->dest = dest;
@@ -443,7 +456,7 @@ ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport)
     napt_debug_print();
 #endif
 
-    return t->mport;
+    return t->mdport;
   }
   t = NT(napt_free);
   if (t) {
@@ -461,7 +474,8 @@ ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport)
     t->dest = dest;
     t->sport = sport;
     t->dport = dport;
-    t->mport = mport;
+    t->msport = msport;
+    t->mdport = mport;
     t->proto = proto;
     t->fin1 = t->fin2 = t->finack1 = t->finack2 = t->synack = t->rst = 0;
     ip_napt_insert(t);
@@ -595,6 +609,8 @@ ip_napt_modify_addr(struct ip_hdr *iphdr, ip4_addr_p_t *field, u32_t newval)
 void
 ip_napt_recv(struct pbuf *p, struct ip_hdr *iphdr)
 {
+  LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_recv: start\n"));
+
   struct portmap_table *m;
   struct napt_table *t;
 #if LWIP_ICMP
@@ -687,8 +703,13 @@ ip_napt_recv(struct pbuf *p, struct ip_hdr *iphdr)
 err_t
 ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct netif *outp)
 {
-  if (!inp->napt)
+  LWIP_DEBUGF(IP_DEBUG, ("ip_napt_forward: start\n"));
+
+  if (!inp->napt) {
+    LWIP_DEBUGF(IP_DEBUG, ("ip_napt_forward: inp->napt is off, %d for netif %d\n", 
+      inp->napt, inp->num));
     return ERR_OK;
+  }
 
 #if LWIP_ICMP
   /* NAPT for ICMP Echo Request using identifier */
@@ -696,7 +717,7 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
     struct icmp_echo_hdr *iecho = (struct icmp_echo_hdr *)((u8_t *)p->payload + IPH_HL(iphdr) * 4);
     if (iecho->type == ICMP_ECHO) {
       /* register src addr and iecho->id and dest info */
-      ip_napt_add(IP_PROTO_ICMP, iphdr->src.addr, iecho->id, iphdr->dest.addr, iecho->id);
+      ip_napt_add(IP_PROTO_ICMP, iphdr->src.addr, iecho->id, iphdr->dest.addr, iecho->id, 0);
 
       ip_napt_modify_addr(iphdr, &iphdr->src, ip_2_ip4(&outp->ip_addr)->addr);
     }
@@ -723,18 +744,18 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
         PP_NTOHS(tcphdr->src) >= 1024) {
       /* Register new TCP session to NAPT */
       mport = ip_napt_add(IP_PROTO_TCP, iphdr->src.addr, tcphdr->src,
-                          iphdr->dest.addr, tcphdr->dest);
+                          iphdr->dest.addr, tcphdr->dest, tcphdr->dest);
       if (mport == 0)
         return ERR_RTE; /* routing err if add entry failed */
     } else {
-      struct napt_table *t = ip_napt_find(IP_PROTO_TCP, iphdr->src.addr, tcphdr->src, 0, 0);
+      struct napt_table *t = ip_napt_find(IP_PROTO_TCP, iphdr->src.addr, tcphdr->src, tcphdr->dest, 0);
       if (!t || t->dest != iphdr->dest.addr || t->dport != tcphdr->dest) {
 #if LWIP_ICMP
       icmp_dest_unreach(p, ICMP_DUR_PORT);
 #endif
       return ERR_RTE; /* Drop unknown TCP session */
     }
-    mport = t->mport;
+    mport = t->mdport;
     if ((TCPH_FLAGS(tcphdr) & TCP_FIN))
         t->fin2 = 1;
     if (t->fin1 && (TCPH_FLAGS(tcphdr) & TCP_ACK))
@@ -770,18 +791,18 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
     if (PP_NTOHS(udphdr->src) >= 1024) {
       /* Register new UDP session */
       mport = ip_napt_add(IP_PROTO_UDP, iphdr->src.addr, udphdr->src,
-                          iphdr->dest.addr, udphdr->dest);
+                          iphdr->dest.addr, udphdr->dest, udphdr->dest);
       if (mport == 0)
         return ERR_RTE; /* routing err if add entry failed */
     } else {
-      struct napt_table *t = ip_napt_find(IP_PROTO_UDP, iphdr->src.addr, udphdr->src, 0, 0);
+      struct napt_table *t = ip_napt_find(IP_PROTO_UDP, iphdr->src.addr, udphdr->src, udphdr->dest, 0);
       if (!t || t->dest != iphdr->dest.addr || t->dport != udphdr->dest) {
 #if LWIP_ICMP
         icmp_dest_unreach(p, ICMP_DUR_PORT);
 #endif
         return ERR_RTE; /* Drop unknown UDP session */
       }
-      mport = t->mport;
+      mport = t->mdport;
     }
 
     if (mport != udphdr->src)
@@ -794,6 +815,105 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
 
   return ERR_OK;
 }
+
+err_t
+ip_napt_forward_local(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
+{
+  LWIP_DEBUGF(IP_DEBUG, ("ip_napt_forward_local: start\n"));
+
+#if LWIP_TCP
+  if (IPH_PROTO(iphdr) == IP_PROTO_TCP) {
+    struct tcp_hdr *tcphdr = (struct tcp_hdr *)((u8_t *)p->payload + IPH_HL(iphdr) * 4);
+
+    struct napt_table *t = ip_napt_find(IP_PROTO_TCP, iphdr->src.addr, tcphdr->src, tcphdr->dest, 1);
+    if (t) {
+      /* packet from port-mapped dest addr/port: rewrite source to this node */
+      ip_napt_modify_port_tcp(tcphdr, 0, t->msport);
+      ip_napt_modify_addr_tcp(tcphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_port_tcp(tcphdr, 1, t->sport);
+      ip_napt_modify_addr_tcp(tcphdr, &iphdr->dest, t->src);
+      ip_napt_modify_addr(iphdr, &iphdr->dest, t->src);
+      return ERR_OK;
+    }
+
+    struct napt_table *t2 = ip_napt_find(IP_PROTO_TCP, iphdr->src.addr, tcphdr->src, tcphdr->dest, 0);
+    if (t2) {
+      /* packet from port-mapped src addr/port: rewrite source to this node */
+      ip_napt_modify_port_tcp(tcphdr, 0, t2->mdport);
+      ip_napt_modify_addr_tcp(tcphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_port_tcp(tcphdr, 1, t2->dport);
+      ip_napt_modify_addr_tcp(tcphdr, &iphdr->dest, t2->dest);
+      ip_napt_modify_addr(iphdr, &iphdr->dest, t2->dest);
+      return ERR_OK;
+    }
+
+    struct portmap_table *m = ip_portmap_find(IP_PROTO_TCP, tcphdr->dest);
+    if (m) {
+      /* packet from port-mapped dest addr/port: rewrite source to this node */
+      u16_t mport = ip_napt_add(IP_PROTO_TCP, iphdr->src.addr, tcphdr->src,
+                          m->daddr, m->dport, tcphdr->dest);
+      ip_napt_modify_port_tcp(tcphdr, 0, mport);
+      ip_napt_modify_addr_tcp(tcphdr, &iphdr->src, m->maddr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, m->maddr);
+      ip_napt_modify_port_tcp(tcphdr, 1, m->dport);
+      ip_napt_modify_addr_tcp(tcphdr, &iphdr->dest, m->daddr);
+      ip_napt_modify_addr(iphdr, &iphdr->dest, m->daddr);
+      return ERR_OK;
+    }
+    return ERR_RTE; /* not forwarding on same netif */
+  }
+#endif
+
+#if LWIP_UDP
+  if (IPH_PROTO(iphdr) == IP_PROTO_UDP) {
+    struct udp_hdr *udphdr = (struct udp_hdr *)((u8_t *)p->payload + IPH_HL(iphdr) * 4);
+
+    struct napt_table *t = ip_napt_find(IP_PROTO_UDP, iphdr->src.addr, udphdr->src, udphdr->dest, 1);
+    if (t) {
+      /* packet from port-mapped dest addr/port: rewrite source to this node */
+      ip_napt_modify_port_udp(udphdr, 0, t->msport);
+      ip_napt_modify_addr_udp(udphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_port_udp(udphdr, 1, t->sport);
+      ip_napt_modify_addr_udp(udphdr, &iphdr->dest, t->src);
+      ip_napt_modify_addr(iphdr, &iphdr->dest, t->src);
+      return ERR_OK;
+    }
+
+    struct napt_table *t2 = ip_napt_find(IP_PROTO_UDP, iphdr->src.addr, udphdr->src, udphdr->dest, 0);
+    if (t2) {
+      /* packet from port-mapped src addr/port: rewrite source to this node */
+      ip_napt_modify_port_udp(udphdr, 0, t2->mdport);
+      ip_napt_modify_addr_udp(udphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, iphdr->dest.addr);
+      ip_napt_modify_port_udp(udphdr, 1, t2->dport);
+      ip_napt_modify_addr_udp(udphdr, &iphdr->dest, t2->dest);
+      ip_napt_modify_addr(iphdr, &iphdr->dest, t2->dest);
+      return ERR_OK;
+    }
+
+    struct portmap_table *m = ip_portmap_find(IP_PROTO_UDP, udphdr->dest);
+    if (m) {
+      /* packet from port-mapped dest addr/port: rewrite source to this node */
+      u16_t mport = ip_napt_add(IP_PROTO_UDP, iphdr->src.addr, udphdr->src,
+                          m->daddr, m->dport, udphdr->dest);
+      ip_napt_modify_port_udp(udphdr, 0, mport);
+      ip_napt_modify_addr_udp(udphdr, &iphdr->src, m->maddr);
+      ip_napt_modify_addr(iphdr, &iphdr->src, m->maddr);
+      ip_napt_modify_port_udp(udphdr, 1, m->dport);
+      ip_napt_modify_addr_udp(udphdr, &iphdr->dest, m->daddr);
+      ip_napt_modify_addr(iphdr, &iphdr->dest, m->daddr);
+      return ERR_OK;
+    }
+    return ERR_RTE; /* not forwarding on same netif */
+  }
+#endif
+
+  return ERR_RTE;
+}
+
 #endif /* IP_NAPT */
 #endif /* LWIP_IPV4 */
 #endif /* ESP_LWIP */
