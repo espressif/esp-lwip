@@ -320,6 +320,8 @@ ip4_canforward(struct pbuf *p)
   return 1;
 }
 
+#if IP_NAPT
+#if IP_FORWARD
 /**
  * Forwards an IP packet back to the same interface it came in on if an napt or forward
  * rule exists for it. It decrements the TTL value of the packet, adjusts the
@@ -330,7 +332,7 @@ ip4_canforward(struct pbuf *p)
  * @param inp the netif on which this packet was received
  * return ERR_OK if packet was forwarded
  */
-err_t
+static err_t
 ip4_forward_local(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
 {
   LWIP_DEBUGF(IP_DEBUG, ("ip4_forward_local: start\n"));
@@ -366,7 +368,7 @@ ip4_forward_local(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
 
 #if ESP_LWIP
 #if IP_NAPT
-  if (ip_napt_forward_local(p, iphdr, inp) != ERR_OK)
+  if (ip_napt_forward_local(p, iphdr) != ERR_OK)
     return ERR_RTE;
 #endif
 #endif /* ESP_LWIP */
@@ -429,6 +431,8 @@ return_noroute:
   MIB2_STATS_INC(mib2.ipoutnoroutes);
   return ERR_RTE;
 }
+#endif /* FORWARD */
+#endif /* NAPT */
 
 /**
  * Forwards an IP packet. It finds an appropriate route for the
@@ -442,9 +446,10 @@ return_noroute:
 static void
 ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
 {
-  LWIP_DEBUGF(IP_DEBUG, ("ip4_forward: start\n"));
 
   struct netif *netif;
+
+  LWIP_DEBUGF(IP_DEBUG, ("ip4_forward: start\n"));
 
   PERF_START;
   LWIP_UNUSED_ARG(inp);
@@ -633,7 +638,6 @@ ip4_input_accept(struct netif *netif)
 err_t
 ip4_input(struct pbuf *p, struct netif *inp)
 {
-  LWIP_DEBUGF(IP_DEBUG, ("ip4_input: start\n"));
 
 #if ESP_LWIP && IP_NAPT
   struct ip_hdr *iphdr;
@@ -649,6 +653,8 @@ ip4_input(struct pbuf *p, struct netif *inp)
 #if LWIP_RAW
   raw_input_state_t raw_status;
 #endif /* LWIP_RAW */
+
+  LWIP_DEBUGF(IP_DEBUG, ("ip4_input: start\n"));
 
   LWIP_ASSERT_CORE_LOCKED();
 
@@ -764,6 +770,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
        list of configured netifs. */
     if (ip4_input_accept(inp)) {
       netif = inp;
+#if IP_NAPT
 #if IP_FORWARD
       /* try to forward IP packet on (this) interface */
       if (inp->napt && IP_FORWARD_ALLOW_TX_ON_RX_NETIF) {
@@ -773,6 +780,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
         }
       }
 #endif /* IP_FORWARD */
+#endif /* IP_NAPT */
     } else {
       netif = NULL;
 #if !LWIP_NETIF_LOOPBACK || LWIP_HAVE_LOOPIF
