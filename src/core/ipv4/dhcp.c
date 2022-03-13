@@ -365,13 +365,14 @@ static void
 dhcp_handle_offer(struct netif *netif, struct dhcp_msg *msg_in)
 {
   struct dhcp *dhcp = netif_dhcp_data(netif);
+  u8_t n;
 
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_handle_offer(netif=%p) %c%c%"U16_F"\n",
               (void *)netif, netif->name[0], netif->name[1], (u16_t)netif->num));
 
   /* Vendor Specific Information */
 #if ESP_DHCP && !ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER
-  for (u8_t n = 0; (n < DHCP_OPTION_VSI_MAX) && dhcp_option_given(dhcp, DHCP_OPTION_IDX_VSI + n); n++) {
+  for (n = 0; (n < DHCP_OPTION_VSI_MAX) && dhcp_option_given(dhcp, DHCP_OPTION_IDX_VSI + n); n++) {
     dhcp_option_vsi[n] = lwip_htonl(dhcp_get_option_value(dhcp, DHCP_OPTION_IDX_VSI + n));
   }
 #endif /* ESP_DHCP && !ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER */
