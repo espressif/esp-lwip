@@ -396,10 +396,12 @@ START_TEST(test_ip4_route_netif_napt_udp)
 
   /* cleanup */
   netif_set_down(&ap);
-  ip_napt_enable_no(ap.num, 0);
   netif_remove(&ap);
   netif_set_down(&sta);
   netif_remove(&sta);
+
+  IP4_ADDR(&addr, 10, 0, 0, 1);
+  ip_napt_enable(addr.addr, 0);
 
 #undef UDP_PORT
 }
@@ -570,6 +572,7 @@ ip4route_suite(void)
     TESTFUNC(test_ip4_route_netif_napt_tcp),
     TESTFUNC(test_ip4_route_netif_napt_tcp_PBUF_REF),
     TESTFUNC(test_ip4_route_netif_max_napt),
+    
 #endif
   };
   return create_suite("IP4_ROUTE", tests, sizeof(tests)/sizeof(testfunc), ip4route_setup, ip4route_teardown);
