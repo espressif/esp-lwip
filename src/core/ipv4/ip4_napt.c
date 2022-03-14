@@ -193,7 +193,7 @@ ip_napt_enable(u32_t addr, int enable)
     for (netif = netif_list; netif; netif = netif->next)
       netif->napt = 0;
     ip_napt_deinit();
-    LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt set to 0\n"));
+    LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt set to %d\n", enable));
   }
 }
 
