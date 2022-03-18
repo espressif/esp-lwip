@@ -1,0 +1,50 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    env:
+      CC: ${{ matrix.compiler }}
+      LSAN_OPTIONS: verbosity=1:log_threads=1
+      WGET_PATH: http://download.savannah.nongnu.org/releases/lwip
+      CONTRIB: contrib-2.1.0
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install deps
+      run: |
+        sudo apt-get install check ninja-build doxygen
+        wget --no-verbose ${WGET_PATH}/${CONTRIB}.zip
+        unzip -oq ${CONTRIB}.zip
+        patch -s -p0 < test/${CONTRIB}.patch
+
+    - name: Build unit tests with make
+      run: LWIPDIR=../../../../src make -C ${CONTRIB}/ports/unix/check
+    - name: Run unit tests
+      run: LWIPDIR=../../../../src make -C ${CONTRIB}/ports/unix/check check
+
+    - name: Run cmake
+      run: mkdir build && cd build && cmake .. -G Ninja
+    - name: Build with cmake
+      run: cd build && cmake --build .
+    - name: Build docs with cmake
+      run: cd build && cmake --build . --target lwipdocs
+
+    - name: Validate combinations of options
+      run: |
+        cp ${CONTRIB}/examples/example_app/lwipcfg.h.example ${CONTRIB}/examples/example_app/lwipcfg.h
+        cd ${CONTRIB}/ports/unix/example_app
+        export CFLAGS="-DESP_LWIP=LWIP_NETCONN_FULLDUPLEX"
+        export LWIPDIR=../../../../src/
+        chmod +x iteropts.sh && ./iteropts.sh
+
+    - name: Build and run unit tests with cmake
+      run: |
+        cd ${CONTRIB}/ports/unix/check
+        mkdir build && cd build && cmake -DLWIP_DIR=`pwd`/../../../../.. .. -G Ninja
+        cmake --build . && ./lwip_unittests
