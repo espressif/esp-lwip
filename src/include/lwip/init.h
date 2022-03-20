@@ -58,7 +58,7 @@ extern "C" {
 /** For release candidates, this is set to 1..254
   * For official releases, this is set to 255 (LWIP_RC_RELEASE)
   * For development versions (Git), this is set to 0 (LWIP_RC_DEVELOPMENT) */
-#define LWIP_VERSION_RC         LWIP_RC_RELEASE
+#define LWIP_VERSION_RC         LWIP_RC_DEVELOPMENT
 
 /** LWIP_VERSION_RC is set to LWIP_RC_RELEASE for official releases */
 #define LWIP_RC_RELEASE         255
@@ -75,7 +75,7 @@ extern "C" {
 #if LWIP_VERSION_IS_RELEASE
 #define LWIP_VERSION_STRING_SUFFIX ""
 #elif LWIP_VERSION_IS_DEVELOPMENT
-#define LWIP_VERSION_STRING_SUFFIX "d"
+#define LWIP_VERSION_STRING_SUFFIX "esp"
 #else
 #define LWIP_VERSION_STRING_SUFFIX "rc" LWIP_VERSTR(LWIP_VERSION_RC)
 #endif
