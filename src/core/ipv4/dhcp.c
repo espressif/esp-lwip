@@ -795,6 +795,12 @@ dhcp_start(struct netif *netif)
     return ERR_OK;
   }
 
+#ifdef LWIP_HOOK_DHCP_POST_INIT
+  if (LWIP_HOOK_DHCP_POST_INIT(netif, result)) {
+    return result;
+  }
+#endif
+
   /* (re)start the DHCP negotiation */
   result = dhcp_discover(netif);
   if (result != ERR_OK) {
