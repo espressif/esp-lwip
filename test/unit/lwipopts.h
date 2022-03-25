@@ -84,6 +84,13 @@
 #define LWIP_MEM_ILLEGAL_FREE(msg)      /* to nothing */
 
 #ifdef ESP_LWIP
+#define LWIP_DHCP_ENABLE_VENDOR_SPEC_IDS 1
+#define LWIP_DHCP_ENABLE_CLIENT_ID 1
+#define LWIP_DHCP_ENABLE_MTU_UPDATE 1
+#if LWIP_DHCP_ENABLE_VENDOR_SPEC_IDS
+#define DHCP_OPTION_VSI             43
+#define LWIP_HOOK_DHCP_EXTRA_REQUEST_OPTIONS , DHCP_OPTION_VSI
+#endif
 /* Enable Espressif specific options */
 
 /* DHCP options*/
@@ -108,6 +115,26 @@ static inline uint32_t timeout_from_offered(uint32_t lease, uint32_t min)
 #define DHCP_CALC_TIMEOUT_FROM_OFFERED_T2_REBIND(dhcp) \
         timeout_from_offered((dhcp)->offered_t2_rebind, ((dhcp)->t0_timeout/8)*7 /* 87.5% */ )
 
+struct dhcp;
+struct pbuf;
+struct dhcp;
+struct netif;
+struct dhcp_msg;
+void dhcp_parse_extra_opts(struct dhcp *dhcp, uint8_t state, uint8_t option, uint8_t len, struct pbuf* p, uint16_t offset);
+void dhcp_append_extra_opts(struct netif *netif, uint8_t state, struct dhcp_msg *msg_out, uint16_t *options_out_len);
+int dhcp_set_vendor_class_identifier(uint8_t len, const char * str);
+int dhcp_get_vendor_specific_information(uint8_t len, char * str);
+void dhcp_free_vendor_class_identifier(void);
+
+
+#define LWIP_HOOK_DHCP_PARSE_OPTION(netif, dhcp, state, msg, msg_type, option, len, pbuf, offset)   \
+        do {    LWIP_UNUSED_ARG(msg);                                           \
+                dhcp_parse_extra_opts(dhcp, state, option, len, pbuf, offset);  \
+            } while(0)
+
+#define LWIP_HOOK_DHCP_APPEND_OPTIONS(netif, dhcp, state, msg, msg_type, options_len_ptr) \
+        dhcp_append_extra_opts(netif, state, msg, options_len_ptr);
+
 /* NAPT options */
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
@@ -126,6 +153,8 @@ u32_t esp_random(void);
 #endif /* ESP_TEST_DEBUG */
 #else
 #define ESP_LWIP                        0
+#define ESP_DHCP 0
+#define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 1
 #endif /* ESP_LWIP */
 
 #endif /* LWIP_HDR_LWIPOPTS_H */

@@ -30,4 +30,5 @@ set(LWIP_TESTFILES
 	${LWIP_TESTDIR}/tcp/test_tcp_state.c
 	${LWIP_TESTDIR}/tcp/test_tcp.c
 	${LWIP_TESTDIR}/udp/test_udp.c
+	${LWIP_TESTDIR}/esp_platform_hooks.c
 )
