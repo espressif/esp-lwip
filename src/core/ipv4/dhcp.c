@@ -92,6 +92,13 @@
 #define LWIP_HOOK_DHCP_PARSE_OPTION(netif, dhcp, state, msg, msg_type, option, len, pbuf, offset) do { LWIP_UNUSED_ARG(msg); } while(0)
 #endif
 
+/** LWIP_HOOK_DHCP_EXTRA_REQUEST_OPTIONS: Additional options added to the list of options
+ * that the client requests from the servers (opt 55: DHCP_OPTION_PARAMETER_REQUEST_LIST)
+ */
+#ifndef LWIP_HOOK_DHCP_EXTRA_REQUEST_OPTIONS
+#define LWIP_HOOK_DHCP_EXTRA_REQUEST_OPTIONS
+#endif
+
 #ifndef DHCP_DEFINE_CUSTOM_TIMEOUTS
 static inline u32_t timeout_from_offered(u32_t lease, u32_t min, u32_t max)
 {
@@ -197,6 +204,7 @@ static u8_t dhcp_discover_request_options[] = {
 #if LWIP_DHCP_GET_NTP_SRV
   , DHCP_OPTION_NTP
 #endif /* LWIP_DHCP_GET_NTP_SRV */
+  LWIP_HOOK_DHCP_EXTRA_REQUEST_OPTIONS
 };
 
 #ifdef DHCP_GLOBAL_XID
