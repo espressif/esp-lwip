@@ -56,6 +56,7 @@
 #include "lwip/lwip_napt.h"
 #include "lwip/ip4_napt.h"
 #include "lwip/timeouts.h"
+#include "lwip/stats.h"
 
 #define NO_IDX ((u16_t)-1)
 #define NT(x) ((x) == NO_IDX ? NULL : &ip_napt_table[x])
@@ -97,7 +98,7 @@ struct ip_portmap_entry {
 #endif
 
 static u16_t napt_list = NO_IDX, napt_list_last = NO_IDX, napt_free = 0;
-static u8_t ip_napt_max = 0;
+static u16_t ip_napt_max = 0;
 #if IP_NAPT_PORTMAP
 static uint8_t ip_portmap_max = 0;
 #endif
@@ -106,8 +107,6 @@ static struct ip_napt_entry *ip_napt_table = NULL;
 #if IP_NAPT_PORTMAP
 static struct ip_portmap_entry *ip_portmap_table = NULL;
 #endif
-
-static struct ip_napt_stats napt_stats;
 
 static void ip_napt_gc(uint32_t now, bool force);
 static void ip_napt_tmr(void *arg);
@@ -123,10 +122,12 @@ napt_debug_print(void)
 {
   int i, next, p;
   u32_t now = sys_now();
-  u32_t nr_total = napt_stats.nr_active_tcp + napt_stats.nr_active_udp + napt_stats.nr_active_icmp;
+#if LWIP_STATS
+  u32_t nr_total = STATS_GET(ip_napt.nr_active_tcp) + STATS_GET(ip_napt.nr_active_udp) + STATS_GET(ip_napt.nr_active_icmp);
   DPRINTF(("NAPT table (%"U16_F"+%"U16_F"+%"U16_F"=%"U32_F" / %"U16_F"):\n",
-           napt_stats.nr_active_tcp, napt_stats.nr_active_udp, napt_stats.nr_active_icmp, nr_total, napt_stats.max_entries));
+          STATS_GET(ip_napt.nr_active_tcp), STATS_GET(ip_napt.nr_active_udp), STATS_GET(ip_napt.nr_active_icmp), nr_total, ip_napt_max));
   if (nr_total == 0) return;
+#endif
 
   DPRINTF(("+-----------------------+-----------------------+-------+---------+----------+\n"));
   DPRINTF(("| src                   | dest                  | mport | flags   | age      |\n"));
@@ -175,7 +176,7 @@ static void
 ip_napt_deinit(void)
 {
   napt_list = NO_IDX;
-  napt_stats.max_entries = 0;
+ip_napt_max = 0;
 #if IP_NAPT_PORTMAP
   ip_portmap_max = 0;
 #endif
@@ -218,7 +219,6 @@ ip_napt_init(uint16_t max_nat, uint8_t max_portmap)
     for (i = 0; i < max_nat - 1; i++)
       ip_napt_table[i].next = i + 1;
     ip_napt_table[i].next = NO_IDX;
-    napt_stats.max_entries = max_nat;
 
     sys_timeout(NAPT_TMR_INTERVAL, ip_napt_tmr, NULL);
   }
@@ -366,20 +366,22 @@ ip_napt_insert(struct ip_napt_entry *t)
   if (napt_list_last == NO_IDX)
     napt_list_last = ti;
 
+#if LWIP_STATS
 #if LWIP_TCP
   if (t->proto == IP_PROTO_TCP)
-    napt_stats.nr_active_tcp++;
+    STATS_INC(ip_napt.nr_active_tcp);
 #endif
 #if LWIP_UDP
   if (t->proto == IP_PROTO_UDP)
-    napt_stats.nr_active_udp++;
+    STATS_INC(ip_napt.nr_active_udp);
 #endif
 #if LWIP_ICMP
   if (t->proto == IP_PROTO_ICMP)
-    napt_stats.nr_active_icmp++;
+    STATS_INC(ip_napt.nr_active_icmp);
 #endif
   LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_insert(): TCP=%d, UDP=%d, ICMP=%d\n",
-                           napt_stats.nr_active_tcp, napt_stats.nr_active_udp, napt_stats.nr_active_icmp));
+          STATS_GET(ip_napt.nr_active_tcp), STATS_GET(ip_napt.nr_active_udp), STATS_GET(ip_napt.nr_active_icmp)));
+#endif /* LWIP_STATS */
 }
 
 static void
@@ -398,18 +400,21 @@ ip_napt_free(struct ip_napt_entry *t)
   t->next = napt_free;
   napt_free = ti;
 
+#if LWIP_STATS
 #if LWIP_TCP
   if (t->proto == IP_PROTO_TCP)
-    napt_stats.nr_active_tcp--;
+    STATS_DEC(ip_napt.nr_active_tcp);
 #endif
 #if LWIP_UDP
   if (t->proto == IP_PROTO_UDP)
-    napt_stats.nr_active_udp--;
+    STATS_DEC(ip_napt.nr_active_udp);
 #endif
 #if LWIP_ICMP
   if (t->proto == IP_PROTO_ICMP)
-    napt_stats.nr_active_icmp--;
+    STATS_DEC(ip_napt.nr_active_icmp);
 #endif
+#endif /* LWIP_STATS */
+
   LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_free\n"));
 #if NAPT_DEBUG
   napt_debug_print();
@@ -1007,7 +1012,7 @@ ip_napt_gc(uint32_t now, bool force)
     ip_napt_free(&ip_napt_table[oldest]);
     evicted++;
     forced++;
-    napt_stats.nr_forced_evictions++;
+    STATS_INC(ip_napt.nr_forced_evictions);
   }
   LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_gc(%d): chk %d evict %d (forced %d), oldest %u\n",
                            force, checked, evicted, forced, oldest_age));
@@ -1042,10 +1047,12 @@ ip_napt_tmr(void *arg)
   sys_timeout(NAPT_TMR_INTERVAL, ip_napt_tmr, arg);
 }
 
+#if LWIP_STATS
 void
-ip_napt_get_stats(struct ip_napt_stats *stats)
+ip_napt_get_stats(struct stats_ip_napt *stats)
 {
-  *stats = napt_stats;
+  *stats = STATS_GET(ip_napt);
 }
+#endif /* LWIP_STATS */
 
 #endif /* ESP_LWIP && LWIP_IPV4 && IP_NAPT */

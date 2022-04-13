@@ -141,22 +141,16 @@ u8_t
 ip_portmap_remove(u8_t proto, u16_t mport);
 
 
-struct ip_napt_stats {
-  u16_t max_entries;
-  u16_t nr_active_tcp;
-  u16_t nr_active_udp;
-  u16_t nr_active_icmp;
-  u16_t nr_forced_evictions;
-};
 
+#if LWIP_STATS
 /**
  * Get statistics.
  *
  * @param stats struct to receive current stats
  */
 void
-ip_napt_get_stats(struct ip_napt_stats *stats);
-
+ip_napt_get_stats(struct stats_ip_napt *stats);
+#endif
 
 #endif /* IP_NAPT */
 #endif /* IP_FORWARD */
