@@ -959,15 +959,14 @@ ip_napt_maint(void)
        * but it's fine for our purposes. */
       t->last = now;
     }
-    /* Skip until next tick, nothing to be done here anyway. */
-    return;
   }
   ip_napt_gc(now, false /* make_room */);
   s_last_now = now;
 }
 
 static void
-ip_napt_tmr(void *arg) {
+ip_napt_tmr(void *arg)
+{
   ip_napt_maint();
   sys_timeout(NAPT_TMR_INTERVAL, ip_napt_tmr, arg);
 }
