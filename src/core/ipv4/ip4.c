@@ -446,10 +446,7 @@ return_noroute:
 static void
 ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
 {
-
   struct netif *netif;
-
-  LWIP_DEBUGF(IP_DEBUG, ("ip4_forward: start\n"));
 
   PERF_START;
   LWIP_UNUSED_ARG(inp);
@@ -476,7 +473,6 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
     goto return_noroute;
   }
 #if !IP_FORWARD_ALLOW_TX_ON_RX_NETIF
-
   /* Do not forward packets onto the same network interface on which
    * they arrived. */
   if (netif == inp) {
@@ -551,7 +547,23 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
     return;
   }
   /* transmit pbuf on chosen interface */
+#if ESP_IP_FORWARD
+  if (p->type_internal == PBUF_REF)
+  {
+      struct pbuf *q = pbuf_clone(PBUF_LINK, PBUF_RAM, p);
+      if (q != NULL) {
+          netif->output(netif, q, ip4_current_dest_addr());
+          pbuf_free(q);
+      } else {
+          MIB2_STATS_INC(mib2.ipinaddrerrors);
+          MIB2_STATS_INC(mib2.ipindiscards);
+      }
+  } else {
+    netif->output(netif, p, ip4_current_dest_addr());
+  }
+#else
   netif->output(netif, p, ip4_current_dest_addr());
+#endif /* ESP_IP_FORWARD */
   return;
 return_noroute:
   MIB2_STATS_INC(mib2.ipoutnoroutes);
@@ -638,7 +650,6 @@ ip4_input_accept(struct netif *netif)
 err_t
 ip4_input(struct pbuf *p, struct netif *inp)
 {
-
 #if ESP_LWIP && IP_NAPT
   struct ip_hdr *iphdr;
 #else
@@ -653,8 +664,6 @@ ip4_input(struct pbuf *p, struct netif *inp)
 #if LWIP_RAW
   raw_input_state_t raw_status;
 #endif /* LWIP_RAW */
-
-  LWIP_DEBUGF(IP_DEBUG, ("ip4_input: start\n"));
 
   LWIP_ASSERT_CORE_LOCKED();
 
@@ -997,8 +1006,6 @@ ip4_input(struct pbuf *p, struct netif *inp)
   ip_data.current_ip_header_tot_len = 0;
   ip4_addr_set_any(ip4_current_src_addr());
   ip4_addr_set_any(ip4_current_dest_addr());
-
-  LWIP_DEBUGF(IP_DEBUG, ("ip4_input: done\n"));
 
   return ERR_OK;
 }
