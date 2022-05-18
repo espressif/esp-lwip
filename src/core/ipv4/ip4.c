@@ -320,8 +320,7 @@ ip4_canforward(struct pbuf *p)
   return 1;
 }
 
-#if IP_NAPT
-#if IP_FORWARD
+#if IP_NAPT && IP_FORWARD_ALLOW_TX_ON_RX_NETIF
 /**
  * Forwards an IP packet back to the same interface it came in on if an napt or forward
  * rule exists for it. It decrements the TTL value of the packet, adjusts the
@@ -367,10 +366,8 @@ ip4_forward_local(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
   }
 
 #if ESP_LWIP
-#if IP_NAPT
   if (ip_napt_forward_local(p, iphdr) != ERR_OK)
     return ERR_RTE;
-#endif
 #endif /* ESP_LWIP */
 
   /* copy IP addresses to aligned ip_addr_t */
@@ -431,8 +428,7 @@ return_noroute:
   MIB2_STATS_INC(mib2.ipoutnoroutes);
   return ERR_RTE;
 }
-#endif /* FORWARD */
-#endif /* NAPT */
+#endif /* NAPT && IP_FORWARD_ALLOW_TX_ON_RX_NETIF */
 
 /**
  * Forwards an IP packet. It finds an appropriate route for the
@@ -587,7 +583,7 @@ ip4_input_accept(struct netif *netif)
   LWIP_DEBUGF(IP_DEBUG, ("ip4_input: iphdr->src %"U16_F".%"U16_F".%"U16_F".%"U16_F" ",
 			   ((const u8_t*) (&f))[0], ((const u8_t*) (&f))[1],
 			   ((const u8_t*) (&f))[2], ((const u8_t*) (&f))[3]));
-  LWIP_DEBUGF(IP_DEBUG, (" iphdr->dest %"U16_F".%"U16_F".%"U16_F".%"U16_F" ",
+  LWIP_DEBUGF(IP_DEBUG, ("iphdr->dest %"U16_F".%"U16_F".%"U16_F".%"U16_F" ",
 			   ((const u8_t*) (&a))[0], ((const u8_t*) (&a))[1],
 			   ((const u8_t*) (&a))[2], ((const u8_t*) (&a))[3]));
   LWIP_DEBUGF(IP_DEBUG, ("netif->ip_addr %"U16_F".%"U16_F".%"U16_F".%"U16_F" \n", 
@@ -602,6 +598,21 @@ ip4_input_accept(struct netif *netif)
   LWIP_DEBUGF(IP_DEBUG, ("%"U16_F".%"U16_F".%"U16_F".%"U16_F") \n", 
 			   ((const u8_t*) (&e))[0], ((const u8_t*) (&e))[1],
 			   ((const u8_t*) (&e))[2], ((const u8_t*) (&e))[3]));
+/*
+  LWIP_DEBUGF(IP_DEBUG, ("ip4_input: iphdr->src "));
+  ip4_addr_debug_print_val(IP_DEBUG, ip4_current_dest_addr());
+  LWIP_DEBUGF(IP_DEBUG, (" iphdr->dest "));
+  ip4_addr_debug_print_val(IP_DEBUG, netif_ip4_addr(netif));
+  LWIP_DEBUGF(IP_DEBUG, (" netif->ip_addr "));
+  ip4_addr_debug_print_val(IP_DEBUG, ip4_current_dest_addr() & netif_ip4_netmask(netif));
+  LWIP_DEBUGF(IP_DEBUG, ("\nip4_input:  ("));
+  ip4_addr_debug_print_val(IP_DEBUG, netif_ip4_addr(netif) & netif_ip4_netmask(netif));
+  LWIP_DEBUGF(IP_DEBUG, (", "));
+  ip4_addr_debug_print_val(IP_DEBUG, ip4_current_dest_addr() & ~netif_ip4_netmask(netif));
+  LWIP_DEBUGF(IP_DEBUG, (", "));
+  ip4_addr_debug_print_val(IP_DEBUG, ip4_current_src_addr());
+  LWIP_DEBUGF(IP_DEBUG, (") \n"));
+*/
 #endif
 
   /* interface is up and configured? */
@@ -779,17 +790,13 @@ ip4_input(struct pbuf *p, struct netif *inp)
        list of configured netifs. */
     if (ip4_input_accept(inp)) {
       netif = inp;
-#if IP_NAPT
-#if IP_FORWARD
+#if IP_FORWARD && IP_NAPT && IP_FORWARD_ALLOW_TX_ON_RX_NETIF
       /* try to forward IP packet on (this) interface */
-      if (inp->napt && IP_FORWARD_ALLOW_TX_ON_RX_NETIF) {
-        if (ip4_forward_local(p, (struct ip_hdr *)p->payload, inp) == ERR_OK) {
-          pbuf_free(p);
-          return ERR_OK; 
-        }
+      if (inp->napt && ip4_forward_local(p, (struct ip_hdr *)p->payload, inp) == ERR_OK) {
+        pbuf_free(p);
+        return ERR_OK; 
       }
-#endif /* IP_FORWARD */
-#endif /* IP_NAPT */
+#endif /* IP_FORWARD && NAPT && IP_FORWARD_ALLOW_TX_ON_RX_NETIF */
     } else {
       netif = NULL;
 #if !LWIP_NETIF_LOOPBACK || LWIP_HAVE_LOOPIF

@@ -71,7 +71,9 @@ struct ip_napt_entry {
   u32_t dest;  /* net */
   u16_t sport; /* net */
   u16_t dport; /* net */
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
   u16_t msport; /* net */
+#endif
   u16_t mdport; /* net */
   u8_t proto;
   u8_t fin1 : 1;
@@ -124,9 +126,15 @@ napt_debug_print(void)
   if (nr_total == 0) return;
 #endif
 
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
   DPRINTF(("+-----------------------+-----------------------+-------+-------+---------+----------+\n"));
   DPRINTF(("| src                   | dest                  | msport| mdport| flags   | age      |\n"));
   DPRINTF(("+-----------------------+-----------------------+-------+-------+---------+----------+\n"));
+#else
+  DPRINTF(("+-----------------------+-----------------------+-------+---------+----------+\n"));
+  DPRINTF(("| src                   | dest                  | mport | flags   | age      |\n"));
+  DPRINTF(("+-----------------------+-----------------------+-------+---------+----------+\n"));
+#endif
   for (i = napt_list; i != NO_IDX; i = next) {
      struct ip_napt_entry *t = &ip_napt_table[i];
      next = t->next;
@@ -146,8 +154,10 @@ napt_debug_print(void)
               lwip_ntohs(t->dport)));
 
      p = t->proto;
-     DPRINTF(("| %5"U16_F" | %5"U16_F" | %c%c%c%c%c%c%c | %8"U32_F" |\n",
-              lwip_ntohs(t->msport),
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
+     DPRINTF(("| %5"U16_F" ", lwip_ntohs(t->msport)));
+#endif
+     DPRINTF(("| %5"U16_F" | %c%c%c%c%c%c%c | %8"U32_F" |\n",
               lwip_ntohs(t->mdport),
               (p == IP_PROTO_TCP ? 'T' : (p == IP_PROTO_UDP ? 'U' : (p == IP_PROTO_ICMP ? 'I' : '?'))),
               (t->fin1 ? 'f' : '.'),
@@ -159,7 +169,11 @@ napt_debug_print(void)
               now - t->last));
 
   }
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
   DPRINTF(("+-----------------------+-----------------------+-------+-------+---------+----------+\n"));
+#else
+  DPRINTF(("+-----------------------+-----------------------+-------+---------+----------+\n"));
+#endif
 }
 #endif /* NAPT_DEBUG */
 
@@ -390,8 +404,10 @@ ip_napt_find_port(u8_t proto, u16_t port, u8_t dest)
     next = t->next;
     if (dest && t->proto == proto && t->mdport == port)
       return 1;
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
     if (!dest && t->proto == proto && t->msport == port)
       return 1;
+#endif
   }
   return 0;
 }
@@ -430,7 +446,7 @@ static u16_t
 ip_napt_new_port(u8_t proto, u16_t port)
 {
   if (PP_NTOHS(port) >= IP_NAPT_PORT_RANGE_START && PP_NTOHS(port) <= IP_NAPT_PORT_RANGE_END)
-    if (!ip_napt_find_port(proto, port,1) && !tcp_listening(port))
+    if (!ip_napt_find_port(proto, port, 1) && !tcp_listening(port))
       return port;
   for (;;) {
     port = PP_HTONS(IP_NAPT_PORT_RANGE_START +
@@ -472,7 +488,11 @@ ip_napt_find(u8_t proto, u32_t addr, u16_t port, u16_t mport, u8_t dest)
   for (i = napt_list; i != NO_IDX; i = next) {
     t = NT(i);
     next = t->next;
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
     if (!dest && t->proto == proto && t->src == addr && t->sport == port && t->msport == mport) {
+#else
+    if (!dest && t->proto == proto && t->src == addr && t->sport == port) {
+#endif
       t->last = now;
       LWIP_DEBUGF(NAPT_DEBUG, ("found\n"));
       return t;
@@ -490,7 +510,7 @@ ip_napt_find(u8_t proto, u32_t addr, u16_t port, u16_t mport, u8_t dest)
 
 static u16_t
 ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport, u16_t msport, u32_t seqno)
-{
+{ 
   struct ip_napt_entry *t = ip_napt_find(proto, src, sport, msport, 0);
   if (t) {
     t->last = sys_now();
@@ -527,7 +547,9 @@ ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport, u16_t m
     t->dest = dest;
     t->sport = sport;
     t->dport = dport;
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
     t->msport = msport;
+#endif
     t->mdport = mport;
     t->proto = proto;
     t->fin1 = t->fin2 = t->finack1 = t->finack2 = t->synack = t->rst = 0;
@@ -896,6 +918,7 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
   return ERR_OK;
 }
 
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
 err_t
 ip_napt_forward_local(struct pbuf *p, struct ip_hdr *iphdr)
 {
@@ -999,6 +1022,7 @@ ip_napt_forward_local(struct pbuf *p, struct ip_hdr *iphdr)
 
   return ERR_RTE;
 }
+#endif /* IP_FORWARD_ALLOW_TX_ON_RX_NETIF */
 
 static void
 ip_napt_gc(uint32_t now, bool force)
