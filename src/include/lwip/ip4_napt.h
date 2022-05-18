@@ -65,6 +65,7 @@ extern "C" {
 #define NAPT_TMR_INTERVAL 2000
 #endif
 
+#if IP_FORWARD_ALLOW_TX_ON_RX_NETIF
 /**
  * NAPT for a forwarded packet. It checks whether we need NAPT and modify
  * the packet source address and port if needed.
@@ -75,6 +76,7 @@ extern "C" {
  */
 err_t
 ip_napt_forward_local(struct pbuf *p, struct ip_hdr *iphdr);
+#endif
 
 /**
  * NAPT for a forwarded packet. It checks weather we need NAPT and modify
