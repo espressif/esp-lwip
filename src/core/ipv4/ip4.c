@@ -332,8 +332,11 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
 
 #if ESP_LWIP
 #if IP_NAPT
-  if (ip_napt_forward(p, iphdr, inp, netif) != ERR_OK)
-    return;
+  /* If the output netif uses NAPT, we will not perform NAPT forwarding (because NAPT netif will not search the NAPT table on ip4_input) */
+  if (!netif->napt) {
+    if (ip_napt_forward(p, iphdr, inp, netif) != ERR_OK)
+      return;
+  }
 #endif
 #endif /* ESP_LWIP */
 
