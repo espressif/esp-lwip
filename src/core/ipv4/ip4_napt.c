@@ -176,17 +176,17 @@ static void
 ip_napt_deinit(void)
 {
   napt_list = NO_IDX;
-ip_napt_max = 0;
+  ip_napt_max = 0;
 #if IP_NAPT_PORTMAP
   ip_portmap_max = 0;
 #endif
   mem_free(ip_napt_table);
-ip_napt_table = NULL;
+  ip_napt_table = NULL;
 #if IP_NAPT_PORTMAP
   mem_free(ip_portmap_table);
   ip_portmap_table = NULL;
 #endif
-    sys_untimeout(ip_napt_tmr, NULL);
+  sys_untimeout(ip_napt_tmr, NULL);
 }
 
 /**
@@ -196,7 +196,11 @@ ip_napt_table = NULL;
  * @param max_portmap max number of enties in the NAPT table (use IP_PORTMAP_MAX if in doubt)
  */
 static void
+#if IP_NAPT_PORTMAP
 ip_napt_init(uint16_t max_nat, uint8_t max_portmap)
+#else
+ip_napt_init(uint16_t max_nat)
+#endif
 {
   u16_t i;
 
@@ -210,7 +214,7 @@ ip_napt_init(uint16_t max_nat, uint8_t max_portmap)
 
     ip_napt_table = (struct ip_napt_entry *) mem_calloc(max_nat, sizeof(*ip_napt_table));
 #if IP_NAPT_PORTMAP
-        ip_portmap_table = (struct ip_portmap_entry *) mem_calloc(max_portmap, sizeof(*ip_portmap_table));
+    ip_portmap_table = (struct ip_portmap_entry *) mem_calloc(max_portmap, sizeof(*ip_portmap_table));
     assert(ip_portmap_table != NULL && ip_napt_table != NULL);
 #else
     assert(ip_napt_table != NULL);
@@ -238,7 +242,11 @@ ip_napt_enable(u32_t addr, int enable)
     }
   }
   if (napt_in_any_netif) {
+#if IP_NAPT_PORTMAP
     ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
+#else
+    ip_napt_init(IP_NAPT_MAX);
+#endif
   } else {
     ip_napt_deinit();
   }
@@ -252,7 +260,11 @@ ip_napt_enable_no(u8_t number, int enable)
     if (netif->num == number) {
       netif->napt = !!enable;
       if (enable)
+#if IP_NAPT_PORTMAP
         ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
+#else
+        ip_napt_init(IP_NAPT_MAX);
+#endif
       else
         ip_napt_deinit();
       break;
@@ -272,7 +284,11 @@ ip_napt_enable_netif(struct netif *netif, int enable)
   if (!netif->napt && enable) {
     /* Enable napt */
     netif->napt = 1;
+#if IP_NAPT_PORTMAP
     ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
+#else
+    ip_napt_init(IP_NAPT_MAX);
+#endif
 
   } else if (netif->napt && !enable) {
     /* Disable napt */
@@ -611,6 +627,7 @@ ip_portmap_add(u8_t proto, u32_t maddr, u16_t mport, u32_t daddr, u16_t dport)
     if (p->valid && p->proto == proto && p->mport == mport) {
       p->dport = dport;
       p->daddr = daddr;
+      p->maddr = maddr;
     } else if (!p->valid) {
       p->maddr = maddr;
       p->daddr = daddr;
