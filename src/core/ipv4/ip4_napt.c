@@ -553,6 +553,7 @@ ip_portmap_add(u8_t proto, u32_t maddr, u16_t mport, u32_t daddr, u16_t dport)
     if (p->valid && p->proto == proto && p->mport == mport) {
       p->dport = dport;
       p->daddr = daddr;
+      p->maddr = maddr;
     } else if (!p->valid) {
       p->maddr = maddr;
       p->daddr = daddr;
