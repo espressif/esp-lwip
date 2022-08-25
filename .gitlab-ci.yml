@@ -90,6 +90,22 @@ validate_opts:
     - export LWIPDIR=../../../../src/
     - chmod +x iteropts.sh && ./iteropts.sh
 
+run_test_apps:
+  stage: host_test
+  tags:
+    - host_test
+  script:
+    - *get_contrib
+    - *get_cmake
+    - export LWIP_DIR=`pwd` && export LWIP_CONTRIB_DIR=`pwd`/${CONTRIB}
+    - cd test/apps
+    - for cfg in config_no_linger config_linger config_linger_reuse; do
+    - cmake -DCI_BUILD=1 -DTEST_CONFIG=${cfg} -B ${cfg} -G Ninja .
+    - cmake --build ${cfg}/
+    - timeout 10 ./${cfg}/lwip_test_apps
+    - mv lwip_test_apps.xml ${cfg}.xml
+    - done
+    - for run in {1..10000}; do ( timeout 10 ./config_linger/lwip_test_apps ) || exit 1 ; done
 
 .add_gh_key_remote: &add_gh_key_remote |
   command -v ssh-agent >/dev/null || exit 1
