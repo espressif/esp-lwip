@@ -897,7 +897,7 @@ netconn_drain(struct netconn *conn)
           /* Only tcp pcbs have an acceptmbox, so no need to check conn->type */
           /* pcb might be set to NULL already by err_tcp() */
           /* drain recvmbox */
-#if ESP_LWIP
+#if ESP_LWIP && LWIP_NETCONN_FULLDUPLEX
           newconn->flags |= NETCONN_FLAG_MBOXINVALID;
 #endif /* ESP_LWIP */
           netconn_drain(newconn);
@@ -1007,7 +1007,7 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
     err = ERR_OK;
     /* linger enabled/required at all? (i.e. is there untransmitted data left?) */
     if ((conn->linger >= 0) && (conn->pcb.tcp->unsent || conn->pcb.tcp->unacked)) {
-      if ((conn->linger == 0)) {
+      if (conn->linger == 0) {
         /* data left but linger prevents waiting */
         tcp_abort(tpcb);
         tpcb = NULL;
@@ -1031,7 +1031,11 @@ lwip_netconn_do_close_internal(struct netconn *conn  WRITE_DELAYED_PARAM)
     if ((err == ERR_OK) && (tpcb != NULL))
 #endif /* LWIP_SO_LINGER */
     {
-      err = tcp_close(tpcb);
+      err = tcp_close_ext(tpcb,
+#if LWIP_SO_LINGER
+                          /* don't send RST yet if linger-wait-required */ linger_wait_required ? 0 :
+#endif
+                          1);
     }
   } else {
     err = tcp_shutdown(tpcb, shut_rx, shut_tx);

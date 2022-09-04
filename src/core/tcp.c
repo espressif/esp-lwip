@@ -483,6 +483,12 @@ tcp_close_shutdown_fin(struct tcp_pcb *pcb)
 err_t
 tcp_close(struct tcp_pcb *pcb)
 {
+  return tcp_close_ext(pcb, 1);
+}
+
+err_t
+tcp_close_ext(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
+{
   LWIP_ASSERT_CORE_LOCKED();
 
   LWIP_ERROR("tcp_close: invalid pcb", pcb != NULL, return ERR_ARG);
@@ -495,7 +501,7 @@ tcp_close(struct tcp_pcb *pcb)
     tcp_set_flags(pcb, TF_RXCLOSED);
   }
   /* ... and close */
-  return tcp_close_shutdown(pcb, 1);
+  return tcp_close_shutdown(pcb, rst_on_unacked_data);
 }
 
 /**
