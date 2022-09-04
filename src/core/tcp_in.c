@@ -68,6 +68,17 @@
 /** Initial CWND calculation as defined RFC 2581 */
 #define LWIP_TCP_CALC_INITIAL_CWND(mss) ((tcpwnd_size_t)LWIP_MIN((4U * (mss)), LWIP_MAX((2U * (mss)), 4380U)))
 
+/** Complete potentially lingering closure of a PCB */
+#if LWIP_SO_LINGER
+#define TCP_POLL_LINGERING_CLOSE(pcb) do  { \
+            err_t err_priv;                 \
+            LWIP_UNUSED_ARG(err_priv);      \
+            TCP_EVENT_POLL(pcb, err_priv);  \
+            } while(0)
+#else
+#define TCP_POLL_LINGERING_CLOSE(pcb)
+#endif /* LWIP_SO_LINGER */
+
 /* These variables are global to all functions involved in the input
    processing of TCP segments. They are set by the tcp_input()
    function. */
@@ -1000,6 +1011,7 @@ tcp_process(struct tcp_pcb *pcb)
           TCP_RMV_ACTIVE(pcb);
           pcb->state = TIME_WAIT;
           TCP_REG(&tcp_tw_pcbs, pcb);
+          TCP_POLL_LINGERING_CLOSE(pcb);
         } else {
           tcp_ack_now(pcb);
           pcb->state = CLOSING;
@@ -1018,6 +1030,7 @@ tcp_process(struct tcp_pcb *pcb)
         TCP_RMV_ACTIVE(pcb);
         pcb->state = TIME_WAIT;
         TCP_REG(&tcp_tw_pcbs, pcb);
+        TCP_POLL_LINGERING_CLOSE(pcb);
       }
       break;
     case CLOSING:
@@ -1028,6 +1041,7 @@ tcp_process(struct tcp_pcb *pcb)
         TCP_RMV_ACTIVE(pcb);
         pcb->state = TIME_WAIT;
         TCP_REG(&tcp_tw_pcbs, pcb);
+        TCP_POLL_LINGERING_CLOSE(pcb);
       }
       break;
     case LAST_ACK:
