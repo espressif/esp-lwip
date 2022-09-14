@@ -79,8 +79,19 @@
 #include "lwip/etharp.h"
 #include "lwip/prot/dhcp.h"
 #include "lwip/prot/iana.h"
+#include "lwip/timeouts.h"
 
 #include <string.h>
+
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+#include <stdbool.h>
+static bool is_tmr_start = false;
+#define ESP_LWIP_DHCP_FINE_TIMER_START_ONCE() if (!is_tmr_start) {      \
+        sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timeout_cb, NULL); \
+        is_tmr_start = true; }
+#else
+#define ESP_LWIP_DHCP_FINE_TIMER_START_ONCE()
+#endif /* ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND */
 
 #ifdef LWIP_HOOK_FILENAME
 #include LWIP_HOOK_FILENAME
@@ -296,6 +307,14 @@ dhcp_dec_pcb_refcount(void)
   }
 }
 
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+void dhcp_fine_timeout_cb(void *arg)
+{
+  LWIP_UNUSED_ARG(arg);
+  dhcp_fine_tmr();
+}
+#endif
+
 /**
  * Back-off the DHCP client (because of a received NAK response).
  *
@@ -357,6 +376,7 @@ dhcp_check(struct netif *netif)
   msecs = 500;
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_check(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
 }
 #endif /* DHCP_DOES_ARP_CHECK */
 
@@ -457,6 +477,7 @@ dhcp_select(struct netif *netif)
   msecs = (u16_t)((dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_STATE, ("dhcp_select(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
   return result;
 }
 
@@ -502,10 +523,15 @@ dhcp_coarse_tmr(void)
  * A DHCP server is expected to respond within a short period of time.
  * This timer checks whether an outstanding DHCP request is timed out.
  */
+
 void
 dhcp_fine_tmr(void)
 {
   struct netif *netif;
+
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+  bool tmr_restart = false;
+#endif /* ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND */
   /* loop through netif's */
   NETIF_FOREACH(netif) {
     struct dhcp *dhcp = netif_dhcp_data(netif);
@@ -514,13 +540,27 @@ dhcp_fine_tmr(void)
       /* timer is active (non zero), and is about to trigger now */
       if (dhcp->request_timeout > 1) {
         dhcp->request_timeout--;
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+        tmr_restart = true;
+#endif
       } else if (dhcp->request_timeout == 1) {
         dhcp->request_timeout--;
         /* { dhcp->request_timeout == 0 } */
         LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_fine_tmr(): request timeout\n"));
         /* this client's request timeout triggered */
         dhcp_timeout(netif);
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+        tmr_restart = true;
+#endif
       }
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+  if (tmr_restart) {
+    sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timeout_cb, NULL);
+  } else {
+    sys_untimeout(dhcp_fine_timeout_cb, NULL);
+    is_tmr_start = false;
+  }
+#endif
     }
   }
 }
@@ -1023,6 +1063,7 @@ dhcp_decline(struct netif *netif)
   msecs = 10 * 1000;
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_decline(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
   return result;
 }
 #endif /* DHCP_DOES_ARP_CHECK */
@@ -1089,6 +1130,7 @@ dhcp_discover(struct netif *netif)
   msecs = DHCP_REQUEST_TIMEOUT_SEQUENCE(dhcp->tries);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_discover(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
   return result;
 }
 
@@ -1227,6 +1269,7 @@ dhcp_renew(struct netif *netif)
   msecs = (u16_t)(dhcp->tries < 10 ? dhcp->tries * 2000 : 20 * 1000);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_renew(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
   return result;
 }
 
@@ -1281,6 +1324,7 @@ dhcp_rebind(struct netif *netif)
   msecs = (u16_t)(dhcp->tries < 10 ? dhcp->tries * 1000 : 10 * 1000);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_rebind(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
   return result;
 }
 
@@ -1338,6 +1382,7 @@ dhcp_reboot(struct netif *netif)
   msecs = (u16_t)(dhcp->tries < 10 ? dhcp->tries * 1000 : 10 * 1000);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_reboot(): set request timeout %"U16_F" msecs\n", msecs));
+  ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
   return result;
 }
 

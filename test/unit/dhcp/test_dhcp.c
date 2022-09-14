@@ -5,6 +5,7 @@
 #include "lwip/prot/dhcp.h"
 #include "lwip/prot/iana.h"
 #include "lwip/etharp.h"
+#include "lwip/timeouts.h"
 #include "netif/ethernet.h"
 
 static struct netif net_test;
@@ -140,6 +141,9 @@ static void tick_lwip(void)
 {
   tick++;
   if (tick % 5 == 0) {
+#if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+    sys_untimeout(dhcp_fine_timeout_cb, NULL);
+#endif
     dhcp_fine_tmr();
   }
 #if ESP_LWIP
