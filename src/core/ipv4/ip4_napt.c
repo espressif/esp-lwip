@@ -344,6 +344,7 @@ ip_napt_send_rst(u32_t src_be, u16_t sport_be, u32_t dst_be, u16_t dport_be, u32
   netif = ip4_route(ip_2_ip4(&dst));
   if (netif != NULL) {
     err_t res = ip4_output_if(p, ip_2_ip4(&src), ip_2_ip4(&dst), ICMP_TTL, 0, IP_PROTO_TCP, netif);
+    LWIP_UNUSED_ARG(res); /* might be unused if debugging off */
     LWIP_DEBUGF(NAPT_DEBUG, ("SEND RST to %#x:%u from %#x:%u seq %u ack %u res %d\n",
         lwip_ntohl(src_be), lwip_ntohs(sport_be), lwip_ntohl(dst_be), lwip_ntohs(dport_be),
         seqno_le, ackno_le, res));
