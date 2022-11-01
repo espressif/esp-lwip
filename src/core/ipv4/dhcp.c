@@ -89,8 +89,12 @@ static bool is_tmr_start = false;
 #define ESP_LWIP_DHCP_FINE_TIMER_START_ONCE() if (!is_tmr_start) {      \
         sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timeout_cb, NULL); \
         is_tmr_start = true; }
+#define ESP_LWIP_DHCP_FINE_CLOSE() if (is_tmr_start) {      \
+        sys_untimeout(dhcp_fine_timeout_cb, NULL);          \
+        is_tmr_start = false; }
 #else
 #define ESP_LWIP_DHCP_FINE_TIMER_START_ONCE()
+#define ESP_LWIP_DHCP_FINE_CLOSE()
 #endif /* ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND */
 
 #ifdef LWIP_HOOK_FILENAME
@@ -1210,6 +1214,7 @@ dhcp_bind(struct netif *netif)
   /* netif is now bound to DHCP leased address - set this before assigning the address
      to ensure the callback can use dhcp_supplied_address() */
   dhcp_set_state(dhcp, DHCP_STATE_BOUND);
+  ESP_LWIP_DHCP_FINE_CLOSE();
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_STATE, ("dhcp_bind(): dhcp state is BOUND\n"));
   netif_set_addr(netif, &dhcp->offered_ip_addr, &sn_mask, &gw_addr);
   /* interface is used by routing now that an address is set */
