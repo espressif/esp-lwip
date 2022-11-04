@@ -24,6 +24,7 @@ endif()
 set (LWIP_DEFINITIONS -DLWIP_DEBUG -DLWIP_NOASSERT_ON_ERROR -DLWIP_OPTTEST_FILE)
 set (LWIP_INCLUDE_DIRS
     "${LWIP_DIR}/test/apps"
+    "${LWIP_DIR}/test/unix"
     "${LWIP_CONTRIB_DIR}/ports/unix/port/include"
     "${LWIP_DIR}/test/unit"
     "${LWIP_DIR}/src/include"

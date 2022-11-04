@@ -56,10 +56,6 @@
 #define LWIP_ERRNO_STDINCLUDE	1
 #endif
 
-#ifdef LWIP_RAND
-#define LWIP_RAND() ((u32_t)rand())
-#endif
-
 /* different handling for unit test, normally not needed */
 #ifdef LWIP_NOASSERT_ON_ERROR
 #define LWIP_ERROR(message, expression, handler) do { if (!(expression)) { \
@@ -84,5 +80,9 @@ typedef struct sio_status_s sio_status_t;
 #define __sio_fd_t_defined
 
 typedef unsigned int sys_prot_t;
+
+#ifndef __containerof
+#define __containerof(ptr, type, member) ((type *)(void *)((char *)ptr - offsetof(type, member)))
+#endif
 
 #endif /* LWIP_ARCH_CC_ESP_H */

@@ -146,7 +146,7 @@ START_TEST(test_etharp_table)
   LWIP_UNUSED_ARG(_i);
 
   if (netif_default != &test_netif) {
-    fail("This test needs a default netif");
+    ck_abort_msg("This test needs a default netif");
   }
 
   linkoutput_ctr = 0;

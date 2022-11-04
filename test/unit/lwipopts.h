@@ -145,7 +145,6 @@ void dhcp_free_vendor_class_identifier(void);
 /* NAPT options */
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
-#undef LWIP_RAND
 #define LWIP_RAND() (esp_random())
 #include "lwip/arch.h"
 u32_t esp_random(void);
@@ -166,6 +165,8 @@ u32_t esp_random(void);
 #define ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND 1
 
 #else
+
+#define LWIP_RAND() ((u32_t)rand())
 #define ESP_LWIP                                0
 #define ESP_DNS                                 0
 #define ESP_LWIP_IGMP_TIMERS_ONDEMAND           0

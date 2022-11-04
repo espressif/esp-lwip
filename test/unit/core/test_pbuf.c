@@ -195,7 +195,7 @@ START_TEST(test_pbuf_take_at_edge)
 
   out = (u8_t*)p->payload;
   for (i = 0; i < (int)sizeof(testdata); i++) {
-    fail_unless(out[i] == testdata[i],
+    ck_assert_msg(out[i] == testdata[i],
       "Bad data at pos %d, was %02X, expected %02X", i, out[i], testdata[i]);
   }
 
@@ -204,11 +204,11 @@ START_TEST(test_pbuf_take_at_edge)
   fail_unless(res == ERR_OK);
 
   out = (u8_t*)p->payload;
-  fail_unless(out[p->len - 1] == testdata[0],
+  ck_assert_msg(out[p->len - 1] == testdata[0],
     "Bad data at pos %d, was %02X, expected %02X", p->len - 1, out[p->len - 1], testdata[0]);
   out = (u8_t*)q->payload;
   for (i = 1; i < (int)sizeof(testdata); i++) {
-    fail_unless(out[i-1] == testdata[i],
+    ck_assert_msg(out[i-1] == testdata[i],
       "Bad data at pos %d, was %02X, expected %02X", p->len - 1 + i, out[i-1], testdata[i]);
   }
 
@@ -218,7 +218,7 @@ START_TEST(test_pbuf_take_at_edge)
 
   out = (u8_t*)p->payload;
   for (i = 0; i < (int)sizeof(testdata); i++) {
-    fail_unless(out[i] == testdata[i],
+    ck_assert_msg(out[i] == testdata[i],
       "Bad data at pos %d, was %02X, expected %02X", p->len+i, out[i], testdata[i]);
   }
   pbuf_free(p);
@@ -245,11 +245,11 @@ START_TEST(test_pbuf_get_put_at_edge)
   pbuf_put_at(p, p->len, testdata);
 
   out = (u8_t*)q->payload;
-  fail_unless(*out == testdata,
+  ck_assert_msg(*out == testdata,
     "Bad data at pos %d, was %02X, expected %02X", p->len, *out, testdata);
 
   getdata = pbuf_get_at(p, p->len);
-  fail_unless(*out == getdata,
+  ck_assert_msg(*out == getdata,
     "pbuf_get_at() returned bad data at pos %d, was %02X, expected %02X", p->len, getdata, *out);
   pbuf_free(p);
 }
