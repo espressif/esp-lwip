@@ -851,6 +851,20 @@ netconn_free(struct netconn *conn)
   memp_free(MEMP_NETCONN, conn);
 }
 
+#if ESP_LWIP
+struct tcp_psb_msg {
+  struct tcpip_api_call_data call;
+  struct tcp_pcb *pcb;
+};
+
+static err_t tcp_do_abort(struct tcpip_api_call_data *msg)
+{
+  struct tcp_psb_msg *pcb_msg = __containerof(msg, struct tcp_psb_msg, call);
+  tcp_abort(pcb_msg->pcb);
+  return ERR_OK;
+}
+#endif /* ESP_LWIP */
+
 /**
  * Delete rcvmbox and acceptmbox of a netconn and free the left-over data in
  * these mboxes
@@ -913,7 +927,13 @@ netconn_drain(struct netconn *conn)
 #endif /* ESP_LWIP */
           netconn_drain(newconn);
           if (newconn->pcb.tcp != NULL) {
+#if ESP_LWIP
+            struct tcp_psb_msg pcb_msg = { 0 };
+            pcb_msg.pcb = newconn->pcb.tcp;
+            tcpip_api_call(tcp_do_abort, &pcb_msg.call);
+#else
             tcp_abort(newconn->pcb.tcp);
+#endif /* ESP_LWIP */
             newconn->pcb.tcp = NULL;
           }
           netconn_free(newconn);

@@ -116,6 +116,10 @@
 #define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 0
 #define ESP_IP_FORWARD                          1
 
+#if ESP_LWIP && !defined(__containerof)
+#define __containerof(ptr, type, member) ((type *)(void *)((char *)ptr - offsetof(type, member)))
+#endif
+
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
 #undef LWIP_RAND
