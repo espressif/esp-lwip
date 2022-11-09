@@ -2675,10 +2675,10 @@ again:
     last_select_cb_ctr = select_cb_ctr;
   }
   SYS_ARCH_UNPROTECT(lev);
+#endif /* LWIP_TCPIP_CORE_LOCKING */
 #if ESP_LWIP
   done_socket(sock);
 #endif /* ESP_LWIP */
-#endif
 }
 #endif /* LWIP_SOCKET_SELECT || LWIP_SOCKET_POLL */
 
