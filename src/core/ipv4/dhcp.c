@@ -888,7 +888,7 @@ dhcp_start(struct netif *netif)
     return result;
   }
 #endif
-
+  ESP_LWIP_DHCP_FINE_CLOSE();
   /* (re)start the DHCP negotiation */
   result = dhcp_discover(netif);
   if (result != ERR_OK) {
