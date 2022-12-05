@@ -94,10 +94,10 @@
 #include "lwip/memp.h"
 #include "lwip/dns.h"
 #include "lwip/prot/dns.h"
-#include "lwip/timeouts.h"
 
 #if ESP_LWIP_DNS_TIMERS_ONDEMAND
 #include "stdbool.h"
+#include "lwip/timeouts.h"
 static bool is_tmr_start = false;
 #endif /* ESP_LWIP_DNS_TIMERS_ONDEMAND */
 

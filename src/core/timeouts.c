@@ -96,8 +96,10 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
 #endif /* LWIP_ARP */
 #if LWIP_DHCP
   {DHCP_COARSE_TIMER_MSECS, HANDLER(dhcp_coarse_tmr)},
-  {DHCP_FINE_TIMER_MSECS, HANDLER(dhcp_fine_tmr)},
 #endif /* LWIP_DHCP */
+#if LWIP_DHCP && !ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
+  {DHCP_FINE_TIMER_MSECS, HANDLER(dhcp_fine_tmr)},
+#endif /*  LWIP_DHCP && !ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND */
 #if ESP_DHCPS_TIMER
   {DHCP_COARSE_TIMER_MSECS, HANDLER(dhcps_coarse_tmr)},
 #endif

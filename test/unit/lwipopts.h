@@ -105,6 +105,7 @@
 #define ESP_LWIP_DNS_TIMERS_ONDEMAND            1
 #define ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND 1
 #define ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND 1
+#define ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND      1
 #define ESP_GRATUITOUS_ARP                      1
 #define ESP_LWIP_SELECT                         1
 #define ESP_LWIP_LOCK                           1
