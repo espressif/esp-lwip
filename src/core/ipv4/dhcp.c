@@ -147,6 +147,9 @@ static bool is_tmr_start = false;
 static u32_t dhcp_option_vsi[DHCP_OPTION_VSI_MAX] = {0};
 #endif
 
+#ifndef DHCP_DEFINE_CUSTOM_TIMEOUTS
+#define DHCP_REQUEST_TIMEOUT_SEQUENCE(state, tries)   (u16_t)(( (tries) < 6 ? 1 << (tries) : 60) * 1000)
+#endif 
 /** Option handling: options are parsed in dhcp_parse_reply
  * and saved in an array where other functions can load them from.
  * This might be moved into the struct dhcp (not necessarily since
@@ -495,7 +498,7 @@ dhcp_select(struct netif *netif)
   if (dhcp->tries < 255) {
     dhcp->tries++;
   }
-  msecs = (u16_t)((dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000);
+  msecs = DHCP_REQUEST_TIMEOUT_SEQUENCE(DHCP_STATE_REQUESTING, dhcp->tries);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_STATE, ("dhcp_select(): set request timeout %"U16_F" msecs\n", msecs));
   ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();
@@ -1244,14 +1247,7 @@ dhcp_discover(struct netif *netif)
     autoip_start(netif);
   }
 #endif /* LWIP_DHCP_AUTOIP_COOP */
-#if ESP_DHCP
-/* Since for embedded devices it's not that hard to miss a discover packet, so lower
-   * the discover retry backoff time from (2,4,8,16,32,60,60)s to (500m,1,2,4,8,15,15)s.
-   */
-  msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 250;
-#else
-  msecs = (dhcp->tries < 6 ? 1 << dhcp->tries : 60) * 1000;
-#endif
+  msecs = DHCP_REQUEST_TIMEOUT_SEQUENCE(DHCP_STATE_SELECTING, dhcp->tries);
   dhcp->request_timeout = (u16_t)((msecs + DHCP_FINE_TIMER_MSECS - 1) / DHCP_FINE_TIMER_MSECS);
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_discover(): set request timeout %"U16_F" msecs\n", msecs));
   ESP_LWIP_DHCP_FINE_TIMER_START_ONCE();

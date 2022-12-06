@@ -116,6 +116,12 @@
 #define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 0
 #define ESP_IP_FORWARD                          1
 
+/* DHCP options*/
+#define DHCP_DEFINE_CUSTOM_TIMEOUTS             1
+#define DHCP_REQUEST_TIMEOUT_SEQUENCE(state, tries)   (state == DHCP_STATE_REQUESTING ? \
+                                                       (uint16_t)(1 * 1000) : \
+                                                       (uint16_t)(((tries) < 6 ? 1 << (tries) : 60) * 250))
+
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16
 #undef LWIP_RAND
