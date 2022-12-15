@@ -147,6 +147,7 @@ void dhcp_free_vendor_class_identifier(void);
 #define LWIP_RAND() (esp_random())
 #include "lwip/arch.h"
 u32_t esp_random(void);
+#define IP_NAPT_PORTMAP                 1
 #endif /* IP_NAPT */
 
 /* ESP debug options */
