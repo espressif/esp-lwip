@@ -205,6 +205,37 @@ ip_napt_enable_no(u8_t number, int enable)
   }
 }
 
+int
+ip_napt_enable_netif(struct netif *netif, int enable)
+{
+  struct netif *each_netif;
+
+  if (!netif_is_up(netif)){
+    return 0;
+  }
+
+  if (!netif->napt && enable) {
+    /* Enable napt */
+    netif->napt = 1;
+    ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
+
+  } else if (netif->napt && !enable) {
+    /* Disable napt */
+    netif->napt = 0;
+
+    NETIF_FOREACH(each_netif) {
+      if (each_netif->napt) {
+        /* napt used on another interface, no need for cleanup */
+        return 1;
+      }
+    }
+    ip_napt_deinit();
+  }
+  /* Enabling/disabling napt a second time is a no operation */
+
+  return 1;
+}
+
 /* adjusts checksum in a packet
 - chksum points to the chksum in the packet
 - optr points to the old data in the packet (before)
