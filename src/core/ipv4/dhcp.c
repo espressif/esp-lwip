@@ -97,6 +97,26 @@ static bool is_tmr_start = false;
 #define ESP_LWIP_DHCP_FINE_CLOSE()
 #endif /* ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND */
 
+#ifndef DHCP_DEFINE_CUSTOM_TIMEOUTS
+static inline u32_t timeout_from_offered(u32_t lease, u32_t min, u32_t max)
+{
+    u32_t timeout = (lease + DHCP_COARSE_TIMER_SECS / 2) / DHCP_COARSE_TIMER_SECS;
+    if (timeout > max) {
+        timeout = max;
+    }
+    if (timeout == min) {
+        timeout = 1;
+    }
+    return timeout;
+}
+
+#define DHCP_CALC_TIMEOUT_FROM_OFFERED_T0_LEASE(dhcp) timeout_from_offered((dhcp)->offered_t0_lease, 0, 0xffff)
+#define DHCP_CALC_TIMEOUT_FROM_OFFERED_T1_RENEW(dhcp) timeout_from_offered((dhcp)->offered_t1_renew, 0, 0xffff)
+#define DHCP_CALC_TIMEOUT_FROM_OFFERED_T2_REBIND(dhcp) timeout_from_offered((dhcp)->offered_t2_rebind, 0, 0xffff)
+#define DHCP_REQUEST_TIMEOUT_SEQUENCE(state, tries) (u16_t)(((tries) < 6 ? 1 << (tries) : 60) * 1000)
+
+#endif /* DHCP_DEFINE_CUSTOM_TIMEOUTS */
+
 #ifdef LWIP_HOOK_FILENAME
 #include LWIP_HOOK_FILENAME
 #endif
@@ -147,9 +167,6 @@ static bool is_tmr_start = false;
 static u32_t dhcp_option_vsi[DHCP_OPTION_VSI_MAX] = {0};
 #endif
 
-#ifndef DHCP_DEFINE_CUSTOM_TIMEOUTS
-#define DHCP_REQUEST_TIMEOUT_SEQUENCE(state, tries)   (u16_t)(( (tries) < 6 ? 1 << (tries) : 60) * 1000)
-#endif 
 /** Option handling: options are parsed in dhcp_parse_reply
  * and saved in an array where other functions can load them from.
  * This might be moved into the struct dhcp (not necessarily since
@@ -1263,7 +1280,6 @@ dhcp_discover(struct netif *netif)
 static void
 dhcp_bind(struct netif *netif)
 {
-  u32_t timeout;
   struct dhcp *dhcp;
   ip4_addr_t sn_mask, gw_addr;
   LWIP_ERROR("dhcp_bind: netif != NULL", (netif != NULL), return;);
@@ -1278,11 +1294,7 @@ dhcp_bind(struct netif *netif)
   if (dhcp->offered_t0_lease != 0xffffffffUL) {
      /* set renewal period timer */
      LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t0 renewal timer %"U32_F" secs\n", dhcp->offered_t0_lease));
-     timeout = dhcp->offered_t0_lease;
-     dhcp->t0_timeout = timeout;
-     if (dhcp->t0_timeout == 0) {
-       dhcp->t0_timeout = 120;
-     }
+     dhcp->t0_timeout = DHCP_CALC_TIMEOUT_FROM_OFFERED_T0_LEASE(dhcp);
      LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t0_lease*1000));
   }
 
@@ -1290,22 +1302,14 @@ dhcp_bind(struct netif *netif)
   if (dhcp->offered_t1_renew != 0xffffffffUL) {
     /* set renewal period timer */
     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t1 renewal timer %"U32_F" secs\n", dhcp->offered_t1_renew));
-    timeout = dhcp->offered_t1_renew;
-    dhcp->t1_timeout = timeout;
-    if (dhcp->t1_timeout == 0) {
-      dhcp->t1_timeout = dhcp->t0_timeout>>1;
-    }
+    dhcp->t1_timeout = DHCP_CALC_TIMEOUT_FROM_OFFERED_T1_RENEW(dhcp);
     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t1_renew*1000));
     dhcp->t1_renew_time = dhcp->t1_timeout;
   }
   /* set renewal period timer */
   if (dhcp->offered_t2_rebind != 0xffffffffUL) {
     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t2 rebind timer %"U32_F" secs\n", dhcp->offered_t2_rebind));
-    timeout = dhcp->offered_t2_rebind;
-    dhcp->t2_timeout = timeout;
-    if (dhcp->t2_timeout == 0) {
-      dhcp->t2_timeout = (dhcp->t0_timeout>>3)*7;
-    }
+    dhcp->t2_timeout = DHCP_CALC_TIMEOUT_FROM_OFFERED_T2_REBIND(dhcp);
     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("dhcp_bind(): set request timeout %"U32_F" msecs\n", dhcp->offered_t2_rebind*1000));
     dhcp->t2_rebind_time = dhcp->t2_timeout;
   }
@@ -1315,6 +1319,7 @@ dhcp_bind(struct netif *netif)
     dhcp->t1_timeout = 0;
   }
 #else
+  u32_t timeout;
   if (dhcp->offered_t0_lease != 0xffffffffUL) {
     /* set renewal period timer */
     LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_TRACE, ("dhcp_bind(): t0 renewal timer %"U32_F" secs\n", dhcp->offered_t0_lease));
