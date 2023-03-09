@@ -1472,6 +1472,7 @@ dhcp_release_and_stop(struct netif *netif)
     dhcp->autoip_coop_state = DHCP_AUTOIP_COOP_STATE_OFF;
   }
 #endif /* LWIP_DHCP_AUTOIP_COOP */
+  ESP_LWIP_DHCP_FINE_CLOSE(netif, dhcp);
 
   LWIP_DEBUGF(DHCP_DEBUG | LWIP_DBG_STATE, ("dhcp_release_and_stop(): dhcp state is OFF\n"));
   if (dhcp->pcb_allocated != 0) {
