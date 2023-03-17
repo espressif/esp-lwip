@@ -41,6 +41,7 @@
 #define __LWIP_NAPT_H__
 
 #include "lwip/opt.h"
+#include "lwip/netif.h"
 
 #ifdef __cplusplus
 extern "C" {
