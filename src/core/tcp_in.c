@@ -1598,7 +1598,7 @@ tcp_receive(struct tcp_pcb *pcb)
           if (pcb->rcv_wnd < TCP_TCPLEN(cseg)) {
             LWIP_DEBUGF(TCP_INPUT_DEBUG,
                       ("tcp_receive: OOSEQ packet out of wnd "
-                       "seqno=%"U32_F" wnd =%"U32_F" len=%"U16_F
+                       "seqno=%"U32_F" wnd =%"TCPWNDSIZE_F" len=%"U16_F
                        "snd_wl1=%"U32_F" snd_wl2 =%"U32_F" f = %"X16_F" tf=%"U16_F"\n",
                        seqno,pcb->rcv_wnd,cseg->len,pcb->snd_wl1,pcb->snd_wl1,
                        TCPH_FLAGS((cseg)->tcphdr),pcb->flags));
@@ -1819,7 +1819,7 @@ tcp_receive(struct tcp_pcb *pcb)
                     if (TCPH_FLAGS(next->next->tcphdr) & TCP_SYN) {
                       LWIP_DEBUGF(TCP_INPUT_DEBUG,
                                   ("tcp_receive: ooseq not trimmed correctly to rcv_wnd "
-                                  "seqno=%"U32_F" wnd =%"U32_F" len=%"U16_F
+                                  "seqno=%"U32_F" wnd =%"TCPWNDSIZE_F" len=%"U16_F
                                   "snd_wl1=%"U32_F" snd_wl2 =%"U32_F" f = %"X16_F" tf=%"U16_F"\n",
                                    seqno,pcb->rcv_wnd,next->next->len,pcb->snd_wl1,pcb->snd_wl1,
                                    TCPH_FLAGS(next->next->tcphdr),pcb->flags));

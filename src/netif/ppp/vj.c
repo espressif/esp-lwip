@@ -469,7 +469,7 @@ vj_uncompress_uncomp(struct pbuf *nb, struct vjcompress *comp)
       || (hlen += TCPH_HDRLEN_BYTES((struct tcp_hdr *)&((char *)ip)[hlen]))
           > nb->len
       || hlen > MAX_HDR) {
-    PPPDEBUG(LOG_INFO, ("vj_uncompress_uncomp: bad cid=%d, hlen=%d buflen=%d\n",
+    PPPDEBUG(LOG_INFO, ("vj_uncompress_uncomp: bad cid=%d, hlen=%" U32_F " buflen=%d\n",
       IPH_PROTO(ip), hlen, nb->len));
     vj_uncompress_err(comp);
     return -1;
@@ -596,7 +596,7 @@ vj_uncompress_tcp(struct pbuf **nb, struct vjcompress *comp)
      * We must have dropped some characters (crc should detect
      * this but the old slip framing won't)
      */
-    PPPDEBUG(LOG_INFO, ("vj_uncompress_tcp: head buffer %d too short %d\n",
+    PPPDEBUG(LOG_INFO, ("vj_uncompress_tcp: head buffer %d too short %" U32_F "\n",
           n0->len, vjlen));
     goto bad;
   }

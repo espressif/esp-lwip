@@ -795,7 +795,7 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
       if (m->mport != udphdr->src)
         ip_napt_modify_port_udp(udphdr, 0, m->mport);
       ip_napt_modify_addr_udp(udphdr, &iphdr->src, m->maddr);
-      LWIP_DEBUGF(NAPT_DEBUG, ("Modify UDP addr %x %x", iphdr->src.addr, m->maddr));
+      LWIP_DEBUGF(NAPT_DEBUG, ("Modify UDP addr %" X32_F " %" X32_F, iphdr->src.addr, m->maddr));
       ip_napt_modify_addr(iphdr, &iphdr->src, m->maddr);
       return ERR_OK;
     }
