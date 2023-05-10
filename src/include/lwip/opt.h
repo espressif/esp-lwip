@@ -3028,6 +3028,28 @@
 #endif
 
 /**
+ * LWIP_HOOK_IP6_SELECT_SRC_ADDR(netif, dest):
+ * Called from ip6_select_source_address() (IPv6)
+ * Signature:\code{.c}
+ *   const ip6_addr_t *my_hook(struct netif *netif, const ip6_addr_t *dest);
+ * \endcode
+ * Arguments:
+ * - netif: the netif used for selecting
+ * - dest: the destination IPv6 address
+ * Return values:
+ * - the preferred source IPv6 address of the specified destination IPv6 address
+ * - NULL, in which case none source address is preferred by the hook, lwip
+ *         will determine a source address based RFC 6724.
+ *
+ * The returned address MUST be on the specified netif!
+ * This function is meant to implement advanced IPv6 source address selection with
+ * LWIP_HOOK_IP6_SELECT_SRC_ADDR().
+*/
+#ifdef __DOXYGEN__
+#define LWIP_HOOK_IP6_SELECT_SRC_ADDR(netif, dest)
+#endif
+
+/**
  * LWIP_HOOK_VLAN_CHECK(netif, eth_hdr, vlan_hdr):
  * Called from ethernet_input() if VLAN support is enabled
  * Signature:\code{.c}

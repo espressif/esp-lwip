@@ -290,6 +290,14 @@ ip6_select_source_address(struct netif *netif, const ip6_addr_t *dest)
   u8_t best_pref = 0;
   u8_t best_bits = 0;
 
+  best_addr = NULL;
+  
+#ifdef LWIP_HOOK_IP6_SELECT_SRC_ADDR
+  if ((best_addr = LWIP_HOOK_IP6_SELECT_SRC_ADDR(netif, dest)) != NULL) {
+    return best_addr;
+  }
+#endif
+
   /* Start by determining the scope of the given destination address. These
    * tests are hopefully (roughly) in order of likeliness to match. */
   if (ip6_addr_isglobal(dest)) {
@@ -306,8 +314,6 @@ ip6_select_source_address(struct netif *netif, const ip6_addr_t *dest)
     /* no match, consider scope global */
     dest_scope = IP6_MULTICAST_SCOPE_GLOBAL;
   }
-
-  best_addr = NULL;
 
   for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
     /* Consider only valid (= preferred and deprecated) addresses. */
