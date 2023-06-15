@@ -176,6 +176,8 @@ static void
 ip_napt_deinit(void)
 {
   napt_list = NO_IDX;
+  napt_list_last = NO_IDX;
+  napt_free = 0;
   ip_napt_max = 0;
 #if IP_NAPT_PORTMAP
   ip_portmap_max = 0;
