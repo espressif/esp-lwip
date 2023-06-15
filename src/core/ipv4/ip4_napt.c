@@ -169,6 +169,8 @@ static void
 ip_napt_deinit(void)
 {
   napt_list = NO_IDX;
+  napt_list_last = NO_IDX;
+  napt_free = 0;
   ip_napt_max = 0;
   ip_portmap_max = 0;
   mem_free(ip_napt_table);
