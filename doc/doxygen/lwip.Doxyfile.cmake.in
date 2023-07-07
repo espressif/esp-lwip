@@ -2085,6 +2085,7 @@ PREDEFINED             = __DOXYGEN__=1 \
                          LWIP_TCPIP_CORE_LOCKING=1 \
                          LWIP_IPV4=1 \
                          LWIP_IPV6=1 \
+                         LWIP_ND6=1 \
                          LWIP_ICMP=1 \
                          LWIP_RAW=1 \
                          LWIP_DHCP=1 \

@@ -104,7 +104,9 @@ const struct lwip_cyclic_timer lwip_cyclic_timers[] = {
   {DNS_TMR_INTERVAL, HANDLER(dns_tmr)},
 #endif /* LWIP_DNS */
 #if LWIP_IPV6
+#if LWIP_ND6
   {ND6_TMR_INTERVAL, HANDLER(nd6_tmr)},
+#endif /* LWIP_ND6 */
 #if LWIP_IPV6_REASS && !ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
   {IP6_REASS_TMR_INTERVAL, HANDLER(ip6_reass_tmr)},
 #endif /* LWIP_IPV6_REASS */

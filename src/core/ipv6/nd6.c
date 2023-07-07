@@ -43,7 +43,7 @@
 
 #include "lwip/opt.h"
 
-#if LWIP_IPV6  /* don't build if not configured for use in lwipopts.h */
+#if LWIP_IPV6 && LWIP_ND6 /* don't build if not configured for use in lwipopts.h */
 
 #include "lwip/nd6.h"
 #include "lwip/priv/nd6_priv.h"
@@ -2462,4 +2462,4 @@ nd6_restart_netif(struct netif *netif)
 #endif /* LWIP_IPV6_SEND_ROUTER_SOLICIT */
 }
 
-#endif /* LWIP_IPV6 */
+#endif /* LWIP_IPV6 && LWIP_ND6 */

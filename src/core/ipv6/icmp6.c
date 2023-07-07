@@ -118,7 +118,9 @@ icmp6_input(struct pbuf *p, struct netif *inp)
   case ICMP6_TYPE_RA: /* Router advertisement */
   case ICMP6_TYPE_RD: /* Redirect */
   case ICMP6_TYPE_PTB: /* Packet too big */
+#if LWIP_ND6
     nd6_input(p, inp);
+#endif /* LWIP_ND6 */
     return;
   case ICMP6_TYPE_RS:
 #if LWIP_IPV6_FORWARD

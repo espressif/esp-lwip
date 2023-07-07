@@ -2396,6 +2396,18 @@
 #endif
 
 /**
+ * LWIP_ND6==1: Enable NDP
+ * when LWIP_IPV6 is enabled in lwIP, NDP timer is enabled by default with a timeout of 1 second.
+ * However, in the case of sleepy end-device, NDP is not required.
+ * This leads to CPU waking up every 1 second, resulting in increased power consumption.
+ * Therefore, add a option to control nd6, using LWIP_ND6 enable/disable ND6 protocol.
+ * Unless you are very clear that you do not need to use ND6, please do not disable it!
+ */
+#if !defined LWIP_ND6 || defined __DOXYGEN__
+#define LWIP_ND6                       1
+#endif
+
+/**
  * IPV6_REASS_MAXAGE: Maximum time (in multiples of IP6_REASS_TMR_INTERVAL - so seconds, normally)
  * a fragmented IP packet waits for all fragments to arrive. If not all fragments arrived
  * in this time, the whole packet is discarded.

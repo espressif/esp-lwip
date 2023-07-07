@@ -38,6 +38,7 @@
 
 #define LWIP_IPV4                  1
 #define LWIP_IPV6                  0
+#define LWIP_ND6                   0
 #define LWIP_IPV6_REASS            0
 
 #define NO_SYS                     0

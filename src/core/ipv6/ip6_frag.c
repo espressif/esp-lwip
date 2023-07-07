@@ -765,7 +765,11 @@ ip6_frag(struct pbuf *p, struct netif *netif, const ip6_addr_t *dest)
 #endif
   static u32_t identification;
   u16_t left, cop;
+#if LWIP_ND6
   const u16_t mtu = nd6_get_destination_mtu(dest, netif);
+#else 
+  const u16_t mtu = IP6_MIN_MTU_LENGTH;
+#endif /* LWIP_ND6 */
   const u16_t nfb = (u16_t)((mtu - (IP6_HLEN + IP6_FRAG_HLEN)) & IP6_FRAG_OFFSET_MASK);
   u16_t fragment_offset = 0;
   u16_t last;
