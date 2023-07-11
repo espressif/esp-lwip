@@ -567,7 +567,9 @@ dhcp_fine_tmr(void)
       }
 #if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
       if (tmr_restart) {
-        sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timeout_cb, (void *)netif);
+        if (dhcp->fine_timer_enabled == true) {
+          sys_timeout(DHCP_FINE_TIMER_MSECS, dhcp_fine_timeout_cb, (void *)netif);
+        }
       } else {
         sys_untimeout(dhcp_fine_timeout_cb, (void *)netif);
         dhcp->fine_timer_enabled = false;
