@@ -363,6 +363,7 @@ lwip_getaddrinfo(const char *nodename, const char *servname,
       && IP_GET_TYPE(&addr) == IPADDR_TYPE_V4) {
     /* Convert native V4 address to a V4-mapped IPV6 address */
     ip4_2_ipv4_mapped_ipv6(ip_2_ip6(&addr), ip_2_ip4(&addr));
+    IP_SET_TYPE_VAL(addr, IPADDR_TYPE_V6);
   }
 #endif
 #endif
