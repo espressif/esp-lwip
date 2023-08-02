@@ -1290,7 +1290,11 @@ tcp_slowtmr_start:
           if ((tcp_rexmit_rto_prepare(pcb) == ERR_OK) || ((pcb->unacked == NULL) && (pcb->unsent != NULL))) {
             /* Double retransmission time-out unless we are trying to
              * connect to somebody (i.e., we are in SYN_SENT). */
+#if ESP_LWIP
+            if (pcb->state != SYN_SENT && pcb->state != SYN_RCVD) {
+#else
             if (pcb->state != SYN_SENT) {
+#endif
               u8_t backoff_idx = LWIP_MIN(pcb->nrtx, sizeof(tcp_backoff) - 1);
               int calc_rto = ((pcb->sa >> 3) + pcb->sv) << tcp_backoff[backoff_idx];
               pcb->rto = (s16_t)LWIP_MIN(calc_rto, 0x7FFF);
