@@ -1,0 +1,11 @@
+name: 'lwip'
+version: '2.1.2'
+cpe: cpe:2.3:a:lwip_project:lwip:{}:*:*:*:*:*:*:*
+supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+originator: 'Organization: non-GNU software and documentation, lwIP Project <lwip-members@nongnu.org>'
+description: A Lightweight TCP/IP stack with additional features and patches from Espressif.
+cve-exclude-list:
+  - cve: CVE-2020-22284
+    reason: The fix for this vulnerability has been incorporated from the lwIP project upstream as ecd6009a, 6ffe30d9 and 8f5a0aaa.
+  - cve: CVE-2020-22283
+    reason: The fix for this vulnerability has been incorporated from the lwIP project upstream as 379d5504, ba3b04e7 and 843a1161 (Note that this vulnerability is not listed in the NVD against lwip version 2.1.2, but version - N/A).
