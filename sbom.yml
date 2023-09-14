@@ -1,0 +1,6 @@
+name: 'lwip'
+version: '2.1.3'
+cpe: cpe:2.3:a:lwip_project:lwip:{}:*:*:*:*:*:*:*
+supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+originator: 'Organization: non-GNU software and documentation, lwIP Project <lwip-members@nongnu.org>'
+description: A Lightweight TCP/IP stack with additional features and patches from Espressif.
