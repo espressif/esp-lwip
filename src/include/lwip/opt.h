@@ -2405,6 +2405,14 @@
 #endif
 
 /**
+ * when LWIP_FORCE_ROUTER_FORWARDING is enbaled in lwip, the router flag in NA packet will always
+ * set to 1, otherwise, never set router flag for NA packets.
+ */
+#if !defined LWIP_FORCE_ROUTER_FORWARDING || defined __DOXYGEN__
+#define LWIP_FORCE_ROUTER_FORWARDING 0
+#endif
+
+/**
  * LWIP_ND6==1: Enable NDP
  * when LWIP_IPV6 is enabled in lwIP, NDP timer is enabled by default with a timeout of 1 second.
  * However, in the case of sleepy end-device, NDP is not required.

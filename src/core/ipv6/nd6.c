@@ -546,7 +546,11 @@ nd6_input(struct pbuf *p, struct netif *inp)
       }
 
       /* Send back a NA for us. Allocate the reply pbuf. */
+#if ESP_LWIP && LWIP_FORCE_ROUTER_FORWARDING
+      nd6_send_na(inp, &target_address, ND6_FLAG_ROUTER | ND6_FLAG_SOLICITED | ND6_FLAG_OVERRIDE);
+#else
       nd6_send_na(inp, &target_address, ND6_FLAG_SOLICITED | ND6_FLAG_OVERRIDE);
+#endif
     }
 
     break; /* ICMP6_TYPE_NS */
