@@ -325,7 +325,9 @@ dns_init(void)
   /* initialize fallback dns DNS server address */
   ip_addr_t dnsserver;
   FALLBACK_DNS_SERVER_ADDRESS(&dnsserver);
+#if LWIP_IPV4 && LWIP_IPV6
   dnsserver.type = IPADDR_TYPE_V4;
+#endif
   dns_setserver(DNS_FALLBACK_SERVER_INDEX, &dnsserver);
 #endif /* FALLBACK_DNS_SERVER_ADDRESS */
 
