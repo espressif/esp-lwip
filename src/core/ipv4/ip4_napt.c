@@ -124,7 +124,7 @@ napt_debug_print(void)
   u32_t now = sys_now();
 #if LWIP_STATS
   u32_t nr_total = STATS_GET(ip_napt.nr_active_tcp) + STATS_GET(ip_napt.nr_active_udp) + STATS_GET(ip_napt.nr_active_icmp);
-  DPRINTF(("NAPT table (%"U16_F"+%"U16_F"+%"U16_F"=%"U32_F" / %"U16_F"):\n",
+  DPRINTF(("NAPT table (%"STAT_COUNTER_F"+%"STAT_COUNTER_F"+%"STAT_COUNTER_F"=%"U32_F" / %"U16_F"):\n",
           STATS_GET(ip_napt.nr_active_tcp), STATS_GET(ip_napt.nr_active_udp), STATS_GET(ip_napt.nr_active_icmp), nr_total, ip_napt_max));
   if (nr_total == 0) return;
 #endif
@@ -363,7 +363,7 @@ ip_napt_send_rst(u32_t src_be, u16_t sport_be, u32_t dst_be, u16_t dport_be, u32
   if (netif != NULL) {
     err_t res = ip4_output_if(p, ip_2_ip4(&src), ip_2_ip4(&dst), ICMP_TTL, 0, IP_PROTO_TCP, netif);
     LWIP_UNUSED_ARG(res); /* might be unused if debugging off */
-    LWIP_DEBUGF(NAPT_DEBUG, ("SEND RST to %#x:%u from %#x:%u seq %u ack %u res %d\n",
+    LWIP_DEBUGF(NAPT_DEBUG, ("SEND RST to %#"X32_F":%"U16_F" from %#"X32_F":%"U16_F" seq %"U32_F" ack %"U32_F" res %d\n",
         lwip_ntohl(src_be), lwip_ntohs(sport_be), lwip_ntohl(dst_be), lwip_ntohs(dport_be),
         seqno_le, ackno_le, res));
   }
@@ -398,7 +398,7 @@ ip_napt_insert(struct ip_napt_entry *t)
   if (t->proto == IP_PROTO_ICMP)
     STATS_INC(ip_napt.nr_active_icmp);
 #endif
-  LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_insert(): TCP=%d, UDP=%d, ICMP=%d\n",
+  LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_insert(): TCP=%"STAT_COUNTER_F", UDP=%"STAT_COUNTER_F", ICMP=%"STAT_COUNTER_F"\n",
           STATS_GET(ip_napt.nr_active_tcp), STATS_GET(ip_napt.nr_active_udp), STATS_GET(ip_napt.nr_active_icmp)));
 #endif /* LWIP_STATS */
 }
@@ -528,7 +528,7 @@ ip_napt_find(u8_t proto, u32_t addr, u16_t port, u16_t mport, u8_t dest)
   struct ip_napt_entry *t;
 
   LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_find\n"));
-  LWIP_DEBUGF(NAPT_DEBUG, ("looking up in table %s: %"U16_F".%"U16_F".%"U16_F".%"U16_F", port: %u, mport: %u\n",
+  LWIP_DEBUGF(NAPT_DEBUG, ("looking up in table %s: %"U16_F".%"U16_F".%"U16_F".%"U16_F", port: %"U16_F", mport: %"U16_F"\n",
                            (dest ? "dest" : "src"),
                            ((const u8_t*) (&addr))[0], ((const u8_t*) (&addr))[1],
                            ((const u8_t*) (&addr))[2], ((const u8_t*) (&addr))[3],
@@ -785,7 +785,7 @@ ip_napt_recv(struct pbuf *p, struct ip_hdr *iphdr)
                              ip4_addr1_16(&iphdr->dest), ip4_addr2_16(&iphdr->dest),
                              ip4_addr3_16(&iphdr->dest), ip4_addr4_16(&iphdr->dest)));
 
-    LWIP_DEBUGF(NAPT_DEBUG, ("sport %u, dport: %u\n",
+    LWIP_DEBUGF(NAPT_DEBUG, ("sport %"U16_F", dport: %"U16_F"\n",
                              lwip_htons(tcphdr->src),
                              lwip_htons(tcphdr->dest)));
 
@@ -1034,7 +1034,7 @@ ip_napt_gc(uint32_t now, bool force)
     forced++;
     STATS_INC(ip_napt.nr_forced_evictions);
   }
-  LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_gc(%d): chk %d evict %d (forced %d), oldest %u\n",
+  LWIP_DEBUGF(NAPT_DEBUG, ("ip_napt_gc(%d): chk %d evict %d (forced %d), oldest %"U32_F"\n",
                            force, checked, evicted, forced, oldest_age));
 }
 
