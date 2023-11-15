@@ -272,6 +272,14 @@
 #endif
 
 /**
+ * MEMP_MEM_MALLOC_CHECK_MAX==1: Honor pool limits even when pool allocation is not used.
+ * Used for controlling maximum memory usage of LWIP stack.
+ */
+#if !defined MEMP_MEM_MALLOC_CHECK_MAX || defined __DOXYGEN__
+#define MEMP_MEM_MALLOC_CHECK_MAX       0
+#endif
+
+/**
  * MEMP_MEM_INIT==1: Force use of memset to initialize pool memory.
  * Useful if pool are moved in uninitialized section of memory. This will ensure
  * default values in pcbs struct are well initialized in all conditions.

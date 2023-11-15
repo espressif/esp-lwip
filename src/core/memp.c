@@ -251,8 +251,20 @@ do_memp_malloc_pool_fn(const struct memp_desc *desc, const char *file, const int
   SYS_ARCH_DECL_PROTECT(old_level);
 
 #if MEMP_MEM_MALLOC
+#if MEMP_MEM_MALLOC_CHECK_MAX
+  if (*desc->remaining) {
+    memp = (struct memp *)mem_malloc(MEMP_SIZE + MEMP_ALIGN_SIZE(desc->size));
+    if (memp != NULL) {
+      *desc->remaining -= 1;
+    }
+  } else {
+    memp = NULL;
+  }
+  SYS_ARCH_PROTECT(old_level);
+#else /* MEMP_MEM_MALLOC_CHECK_MAX */
   memp = (struct memp *)mem_malloc(MEMP_SIZE + MEMP_ALIGN_SIZE(desc->size));
   SYS_ARCH_PROTECT(old_level);
+#endif /* MEMP_MEM_MALLOC_CHECK_MAX */
 #else /* MEMP_MEM_MALLOC */
   SYS_ARCH_PROTECT(old_level);
 
@@ -378,6 +390,9 @@ do_memp_free_pool(const struct memp_desc *desc, void *mem)
 #endif
 
 #if MEMP_MEM_MALLOC
+#if MEMP_MEM_MALLOC_CHECK_MAX
+  *desc->remaining += 1;
+#endif
   LWIP_UNUSED_ARG(desc);
   SYS_ARCH_UNPROTECT(old_level);
   mem_free(memp);
