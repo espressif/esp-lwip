@@ -128,6 +128,11 @@ struct memp_desc {
   /** First free element of each pool. Elements form a linked list. */
   struct memp **tab;
 #endif /* MEMP_MEM_MALLOC */
+
+#if MEMP_MEM_MALLOC_CHECK_MAX
+  /** Remaining number of buffers */
+  u16_t *remaining;
+#endif /* MEMP_MEM_MALLOC_CHECK_MAX */
 };
 
 #if defined(LWIP_DEBUG) || MEMP_OVERFLOW_CHECK || LWIP_STATS_DISPLAY

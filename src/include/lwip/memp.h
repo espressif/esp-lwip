@@ -68,6 +68,22 @@ extern const struct memp_desc* const memp_pools[MEMP_MAX];
 
 #if MEMP_MEM_MALLOC
 
+#if MEMP_MEM_MALLOC_CHECK_MAX
+
+#define LWIP_MEMPOOL_DECLARE(name,num,size,desc) \
+  LWIP_MEMPOOL_DECLARE_STATS_INSTANCE(memp_stats_ ## name) \
+    \
+  static u16_t memp_remaining_ ## name = (num); \
+    \
+  const struct memp_desc memp_ ## name = { \
+    DECLARE_LWIP_MEMPOOL_DESC(desc) \
+    LWIP_MEMPOOL_DECLARE_STATS_REFERENCE(memp_stats_ ## name) \
+    LWIP_MEM_ALIGN_SIZE(size), \
+    &memp_remaining_ ## name \
+  };
+
+#else /* MEMP_MEM_MALLOC_CHECK_MAX */
+
 #define LWIP_MEMPOOL_DECLARE(name,num,size,desc) \
   LWIP_MEMPOOL_DECLARE_STATS_INSTANCE(memp_stats_ ## name) \
   const struct memp_desc memp_ ## name = { \
@@ -75,6 +91,7 @@ extern const struct memp_desc* const memp_pools[MEMP_MAX];
     LWIP_MEMPOOL_DECLARE_STATS_REFERENCE(memp_stats_ ## name) \
     LWIP_MEM_ALIGN_SIZE(size) \
   };
+#endif /* MEMP_MEM_MALLOC_CHECK_MAX */
 
 #else /* MEMP_MEM_MALLOC */
 
