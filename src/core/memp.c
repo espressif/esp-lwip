@@ -240,6 +240,10 @@ memp_init(void)
 #endif /* MEMP_OVERFLOW_CHECK >= 2 */
 }
 
+#if MEMP_MEM_MALLOC && ESP_LWIP && LWIP_TCP
+static u32_t num_tcp_pcb = 0;
+#endif
+
 static void *
 #if !MEMP_OVERFLOW_CHECK
 do_memp_malloc_pool(const struct memp_desc *desc)
@@ -251,6 +255,16 @@ do_memp_malloc_pool_fn(const struct memp_desc *desc, const char *file, const int
   SYS_ARCH_DECL_PROTECT(old_level);
 
 #if MEMP_MEM_MALLOC
+#if ESP_LWIP
+#if LWIP_TCP
+  if(desc == memp_pools[MEMP_TCP_PCB]){
+    if(num_tcp_pcb >= MEMP_NUM_TCP_PCB){
+        return NULL;
+    }
+  }
+#endif
+#endif
+
   memp = (struct memp *)mem_malloc(MEMP_SIZE + MEMP_ALIGN_SIZE(desc->size));
   SYS_ARCH_PROTECT(old_level);
 #else /* MEMP_MEM_MALLOC */
@@ -260,6 +274,12 @@ do_memp_malloc_pool_fn(const struct memp_desc *desc, const char *file, const int
 #endif /* MEMP_MEM_MALLOC */
 
   if (memp != NULL) {
+#if MEMP_MEM_MALLOC && ESP_LWIP && LWIP_TCP
+  if (desc == memp_pools[MEMP_TCP_PCB]) {
+    num_tcp_pcb++;
+  }
+#endif
+
 #if !MEMP_MEM_MALLOC
 #if MEMP_OVERFLOW_CHECK == 1
     memp_overflow_check_element(memp, desc);
@@ -368,6 +388,12 @@ do_memp_free_pool(const struct memp_desc *desc, void *mem)
   memp = (struct memp *)(void *)((u8_t *)mem - MEMP_SIZE);
 
   SYS_ARCH_PROTECT(old_level);
+
+#if MEMP_MEM_MALLOC && ESP_LWIP && LWIP_TCP
+  if (desc == memp_pools[MEMP_TCP_PCB]) {
+    num_tcp_pcb--;
+  }
+#endif
 
 #if MEMP_OVERFLOW_CHECK == 1
   memp_overflow_check_element(memp, desc);
