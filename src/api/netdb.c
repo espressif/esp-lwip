@@ -342,7 +342,34 @@ lwip_getaddrinfo(const char *nodename, const char *servname,
         }
 #endif
       }
+#if LWIP_DNS_DYNAMIC_SORT
+      else {
+        /* AF_UNSPEC prefer IPv6 if we have global IPv6 */
+        // This is not a full implementation of RFC 6724, but it's a simple heuristic that works for most cases.
+        bool has_global_scope_ipv6 = false;
+        struct netif *netif;
+        for(netif = netif_list; netif != NULL; netif = netif->next) {
+          for (int i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+            // Both global and unique local addresses have global scope.
+            // ULA assumes either private DNS or NAT66 (same assumpation as IPv4 private address ranges).
+            if (ip6_addr_isglobal(netif_ip6_addr(netif, i)) || ip6_addr_isuniquelocal(netif_ip6_addr(netif, i))) {
+              has_global_scope_ipv6 = true;
+              break;
+            }
+          }
+          if (has_global_scope_ipv6) {
+            break;
+          }
+        }
+        // NOTE: This will still preference IPv4 on IPv4-only networks (i.e. with only a link-local IPv6),
+        // and IPv6 on IPv6-only (and dual-stack) networks, so works for all cases.
+        if (has_global_scope_ipv6) {
+          type = NETCONN_DNS_IPV6_IPV4;
+        }
+      }
+#endif /* LWIP_DNS_DYNAMIC_SORT */
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
+      // NOTE: If LWIP_IPV4 && LWIP_IPV6 are not defined this is a macro that eliminates `type`, so it still compiles
       err = netconn_gethostbyname_addrtype(nodename, &addr, type);
       if (err != ERR_OK) {
         return EAI_FAIL;
