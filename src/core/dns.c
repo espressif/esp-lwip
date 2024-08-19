@@ -408,6 +408,13 @@ dns_setserver(u8_t numdns, const ip_addr_t *dnsserver)
 void
 dns_clear_cache(void)
 {
+  u8_t i=0;
+  for (i = 0; i < DNS_TABLE_SIZE; i++) {
+    if (dns_table[i].state != DNS_STATE_UNUSED) {
+      dns_call_found(i, NULL);
+    }
+  }
+
   memset(dns_table, 0, sizeof(struct dns_table_entry) * DNS_TABLE_SIZE);
 }
 
