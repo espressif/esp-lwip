@@ -224,8 +224,9 @@ autoip_conflict_callback(struct netif *netif, acd_callback_enum_t state)
       break;
     case ACD_DECLINE:
       /* "delete" conflicting address so a new one will be selected in
-       * autoip_start() */
+       * autoip_start(), increment tried addr */
       ip4_addr_set_any(&autoip->llipaddr);
+      autoip->tried_llipaddr++;
       autoip_stop(netif);
       break;
       default:
