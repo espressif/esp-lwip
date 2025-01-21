@@ -465,7 +465,19 @@ ip6_forward(struct pbuf *p, struct ip6_hdr *iphdr, struct netif *inp)
       IP6_ADDR_BLOCK8(ip6_current_dest_addr())));
 
   /* transmit pbuf on chosen interface */
-  netif->output_ip6(netif, p, ip6_current_dest_addr());
+
+  if (p->type_internal == PBUF_REF) {
+    struct pbuf *q = pbuf_clone(PBUF_LINK, PBUF_RAM, p);
+    if (q != NULL) {
+      netif->output_ip6(netif, q, ip6_current_dest_addr());
+      pbuf_free(q);
+    } else {
+      IP6_STATS_INC(ip6.drop);
+    }
+  } else {
+    netif->output_ip6(netif, p, ip6_current_dest_addr());
+  }
+
   IP6_STATS_INC(ip6.fw);
   IP6_STATS_INC(ip6.xmit);
   return;
