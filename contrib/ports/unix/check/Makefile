@@ -51,7 +51,7 @@ endif
 SYSARCH?=
 include ../Common.mk
 
-LDFLAGS:=-lcheck -lm $(LDFLAGS)
+LDFLAGS:=-lcheck -lm $(LDFLAGS) -Wl,--wrap=mem_free
 
 ifneq ($(UNAME_S),Darwin)
 # check installed via brew on Darwin doesn't have a separate subunit library (must be statically linked)

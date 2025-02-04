@@ -36,6 +36,7 @@ add_executable(lwip_unittests ${LWIP_TESTFILES})
 target_include_directories(lwip_unittests PRIVATE ${LWIP_INCLUDE_DIRS})
 target_compile_options(lwip_unittests PRIVATE ${LWIP_COMPILER_FLAGS})
 target_compile_definitions(lwip_unittests PRIVATE ${LWIP_DEFINITIONS} ${LWIP_MBEDTLS_DEFINITIONS})
+target_link_options(lwip_unittests PRIVATE -Wl,--wrap=mem_free)
 
 find_library(LIBCHECK check)
 find_library(LIBM m)

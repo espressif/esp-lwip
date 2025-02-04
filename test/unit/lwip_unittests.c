@@ -11,6 +11,7 @@
 #include "core/test_mem.h"
 #include "core/test_netif.h"
 #include "core/test_ip4_route.h"
+#include "core/test_ip4_napt.h"
 #include "core/test_pbuf.h"
 #include "core/test_timers.h"
 #include "etharp/test_etharp.h"
@@ -24,6 +25,22 @@
 #if !NO_SYS
 #include "lwip/tcpip.h"
 #endif
+
+/* Adding the wrapper as lwip mem_free doesn't perform
+ * NULL pointer check assertion for unit tests.
+ * Declare the real mem_free function
+ */
+extern void __real_mem_free(void *ptr);
+extern void __wrap_mem_free(void *ptr);
+
+/* Wrapper for mem_free that adds NULL pointer check assertion */
+void __wrap_mem_free(void *rmem)
+{
+  fail_unless(rmem != NULL, "rmem should not be NULL");
+
+  /* Call the real mem_free function */
+  __real_mem_free(rmem);
+}
 
 /* This function is used for LWIP_RAND by some ports... */
 unsigned int
@@ -98,6 +115,7 @@ int main(void)
     pppos_suite,
 #endif /* PPP_SUPPORT && PPPOS_SUPPORT */
 #endif /* ESP_TEST_DEBUG */
+    ip4napt_suite,
     ip4route_suite
   };
   size_t num = sizeof(suites)/sizeof(void*);
