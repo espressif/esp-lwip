@@ -182,11 +182,15 @@ ip_napt_deinit(void)
 #if IP_NAPT_PORTMAP
   ip_portmap_max = 0;
 #endif
-  mem_free(ip_napt_table);
-  ip_napt_table = NULL;
+  if (ip_napt_table != NULL) {
+    mem_free(ip_napt_table);
+    ip_napt_table = NULL;
+  }
 #if IP_NAPT_PORTMAP
-  mem_free(ip_portmap_table);
-  ip_portmap_table = NULL;
+  if (ip_portmap_table != NULL) {
+    mem_free(ip_portmap_table);
+    ip_portmap_table = NULL;
+  }
 #endif
   sys_untimeout(ip_napt_tmr, NULL);
 }
@@ -234,15 +238,22 @@ void
 ip_napt_enable(u32_t addr, int enable)
 {
   struct netif *netif;
+  struct netif *matching_netif = NULL;
   int napt_in_any_netif = 0;
   for (netif = netif_list; netif; netif = netif->next) {
     if (netif_is_up(netif) && !ip_addr_isany(&netif->ip_addr) && (ip_2_ip4(&netif->ip_addr)->addr) == addr) {
       netif->napt = enable;
+      matching_netif = netif;
     }
     if (netif->napt) {
       napt_in_any_netif = 1;
     }
   }
+
+  if (matching_netif == NULL && napt_in_any_netif == 0 && enable) {
+    return;
+  }
+
   if (napt_in_any_netif) {
 #if IP_NAPT_PORTMAP
     ip_napt_init(IP_NAPT_MAX, IP_PORTMAP_MAX);
