@@ -1339,7 +1339,13 @@ dhcp_renew(struct netif *netif)
 #if LWIP_NETIF_HOSTNAME
     options_out_len = dhcp_option_hostname(options_out_len, msg_out->options, netif);
 #endif /* LWIP_NETIF_HOSTNAME */
-
+#if ESP_DHCP
+    options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID, DHCP_OPTION_CLIENT_ID_MAC_LEN);
+    options_out_len = dhcp_option_byte(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID_MAC);
+    for (i = 0; i < netif->hwaddr_len; i++) {
+      options_out_len = dhcp_option_byte(options_out_len, msg_out->options, netif->hwaddr[i]);   
+    }
+#endif/* ESP_DHCP */
     LWIP_HOOK_DHCP_APPEND_OPTIONS(netif, dhcp, DHCP_STATE_RENEWING, msg_out, DHCP_REQUEST, &options_out_len);
     dhcp_option_trailer(options_out_len, msg_out->options, p_out);
 
@@ -1394,7 +1400,13 @@ dhcp_rebind(struct netif *netif)
 #if LWIP_NETIF_HOSTNAME
     options_out_len = dhcp_option_hostname(options_out_len, msg_out->options, netif);
 #endif /* LWIP_NETIF_HOSTNAME */
-
+#if ESP_DHCP
+    options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID, DHCP_OPTION_CLIENT_ID_MAC_LEN);
+    options_out_len = dhcp_option_byte(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID_MAC);
+    for (i = 0; i < netif->hwaddr_len; i++) {
+      options_out_len = dhcp_option_byte(options_out_len, msg_out->options, netif->hwaddr[i]);   
+    }
+#endif/* ESP_DHCP */
     LWIP_HOOK_DHCP_APPEND_OPTIONS(netif, dhcp, DHCP_STATE_REBINDING, msg_out, DHCP_DISCOVER, &options_out_len);
     dhcp_option_trailer(options_out_len, msg_out->options, p_out);
 
@@ -1451,7 +1463,13 @@ dhcp_reboot(struct netif *netif)
 #if LWIP_NETIF_HOSTNAME
     options_out_len = dhcp_option_hostname(options_out_len, msg_out->options, netif);
 #endif /* LWIP_NETIF_HOSTNAME */
-
+#if ESP_DHCP
+    options_out_len = dhcp_option(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID, DHCP_OPTION_CLIENT_ID_MAC_LEN);
+    options_out_len = dhcp_option_byte(options_out_len, msg_out->options, DHCP_OPTION_CLIENT_ID_MAC);
+    for (i = 0; i < netif->hwaddr_len; i++) {
+      options_out_len = dhcp_option_byte(options_out_len, msg_out->options, netif->hwaddr[i]);   
+    }
+#endif/* ESP_DHCP */
     LWIP_HOOK_DHCP_APPEND_OPTIONS(netif, dhcp, DHCP_STATE_REBOOTING, msg_out, DHCP_REQUEST, &options_out_len);
     dhcp_option_trailer(options_out_len, msg_out->options, p_out);
 
