@@ -2,6 +2,7 @@
 
 #include "ip4/test_ip4.h"
 #include "ip6/test_ip6.h"
+#include "ip6/test_ip6_route.h"
 #include "udp/test_udp.h"
 #include "tcp/test_tcp.h"
 #include "tcp/test_tcp_oos.h"
@@ -116,7 +117,8 @@ int main(void)
 #endif /* PPP_SUPPORT && PPPOS_SUPPORT */
 #endif /* ESP_TEST_DEBUG */
     ip4napt_suite,
-    ip4route_suite
+    ip4route_suite,
+    ip6route_suite
   };
   size_t num = sizeof(suites)/sizeof(void*);
   LWIP_ASSERT("No suites defined", num > 0);

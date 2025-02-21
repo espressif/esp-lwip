@@ -36,6 +36,7 @@
 
 #define LWIP_IPV6                       1
 #define LWIP_ND6                        1
+#define LWIP_IPV6_FORWARD               1
 
 #define LWIP_CHECKSUM_ON_COPY           1
 #define TCP_CHECKSUM_ON_COPY_SANITY_CHECK 1
