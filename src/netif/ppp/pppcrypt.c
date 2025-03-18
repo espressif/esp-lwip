@@ -31,12 +31,81 @@
  */
 
 #include "netif/ppp/ppp_opts.h"
-#if PPP_SUPPORT && MSCHAP_SUPPORT /* don't build if not necessary */
+#if PPP_SUPPORT /* don't build if not configured for use in lwipopts.h */
 
 #include "netif/ppp/ppp_impl.h"
-
 #include "netif/ppp/pppcrypt.h"
 
+/*
+ * PSA Crypto wrapper implementations for mbedtls 4.x
+ */
+#if LWIP_USE_EXTERNAL_MBEDTLS
+#include "mbedtls/build_info.h"
+#if MBEDTLS_VERSION_MAJOR >= 4
+#include "psa/crypto.h"
+
+void lwip_psa_md5_init(psa_hash_operation_t *ctx)
+{
+	*ctx = psa_hash_operation_init();
+	psa_crypto_init();
+	psa_hash_setup(ctx, PSA_ALG_MD5);
+}
+
+void lwip_psa_md5_starts(psa_hash_operation_t *ctx)
+{
+	/* No-op: setup done in init */
+	(void)ctx;
+}
+
+void lwip_psa_md5_update(psa_hash_operation_t *ctx, const unsigned char *input, size_t ilen)
+{
+	psa_hash_update(ctx, input, ilen);
+}
+
+void lwip_psa_md5_finish(psa_hash_operation_t *ctx, unsigned char *output)
+{
+	size_t output_length;
+	psa_hash_finish(ctx, output, 16, &output_length);
+}
+
+void lwip_psa_md5_free(psa_hash_operation_t *ctx)
+{
+	psa_hash_abort(ctx);
+}
+
+void lwip_psa_sha1_init(psa_hash_operation_t *ctx)
+{
+	*ctx = psa_hash_operation_init();
+	psa_crypto_init();
+	psa_hash_setup(ctx, PSA_ALG_SHA_1);
+}
+
+void lwip_psa_sha1_starts(psa_hash_operation_t *ctx)
+{
+	/* No-op: setup done in init */
+	(void)ctx;
+}
+
+void lwip_psa_sha1_update(psa_hash_operation_t *ctx, const unsigned char *input, size_t ilen)
+{
+	psa_hash_update(ctx, input, ilen);
+}
+
+void lwip_psa_sha1_finish(psa_hash_operation_t *ctx, unsigned char *output)
+{
+	size_t output_length;
+	psa_hash_finish(ctx, output, 20, &output_length);
+}
+
+void lwip_psa_sha1_free(psa_hash_operation_t *ctx)
+{
+	psa_hash_abort(ctx);
+}
+
+#endif /* MBEDTLS_VERSION_MAJOR >= 4 */
+#endif /* LWIP_USE_EXTERNAL_MBEDTLS */
+
+#if MSCHAP_SUPPORT /* DES key functions only needed for MSCHAP */
 
 static u_char pppcrypt_get_7bits(u_char *input, int startBit) {
 	unsigned int word;
@@ -63,4 +132,6 @@ void pppcrypt_56_to_64_bit_key(u_char *key, u_char * des_key) {
 	des_key[7] = pppcrypt_get_7bits(key, 49);
 }
 
-#endif /* PPP_SUPPORT && MSCHAP_SUPPORT */
+#endif /* MSCHAP_SUPPORT */
+
+#endif /* PPP_SUPPORT */

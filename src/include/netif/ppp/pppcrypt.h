@@ -97,6 +97,49 @@ extern "C" {
  * Map hashes and ciphers functions to mbed TLS
  */
 #if LWIP_USE_EXTERNAL_MBEDTLS
+
+#include "mbedtls/build_info.h"
+
+#if MBEDTLS_VERSION_MAJOR >= 4
+/*
+ * mbedtls 4.x: Use PSA Crypto API for MD5/SHA1.
+ * Note: DES and ARC4 have been removed in mbedtls 4.x, so MS-CHAP and MPPE
+ * are not supported with mbedtls 4.x.
+ */
+#include "psa/crypto.h"
+
+/* PSA MD5 wrapper functions */
+void lwip_psa_md5_init(psa_hash_operation_t *ctx);
+void lwip_psa_md5_starts(psa_hash_operation_t *ctx);
+void lwip_psa_md5_update(psa_hash_operation_t *ctx, const unsigned char *input, size_t ilen);
+void lwip_psa_md5_finish(psa_hash_operation_t *ctx, unsigned char *output);
+void lwip_psa_md5_free(psa_hash_operation_t *ctx);
+
+#define lwip_md5_context psa_hash_operation_t
+#define lwip_md5_init lwip_psa_md5_init
+#define lwip_md5_starts lwip_psa_md5_starts
+#define lwip_md5_update lwip_psa_md5_update
+#define lwip_md5_finish lwip_psa_md5_finish
+#define lwip_md5_free lwip_psa_md5_free
+
+/* PSA SHA1 wrapper functions */
+void lwip_psa_sha1_init(psa_hash_operation_t *ctx);
+void lwip_psa_sha1_starts(psa_hash_operation_t *ctx);
+void lwip_psa_sha1_update(psa_hash_operation_t *ctx, const unsigned char *input, size_t ilen);
+void lwip_psa_sha1_finish(psa_hash_operation_t *ctx, unsigned char *output);
+void lwip_psa_sha1_free(psa_hash_operation_t *ctx);
+
+#define lwip_sha1_context psa_hash_operation_t
+#define lwip_sha1_init lwip_psa_sha1_init
+#define lwip_sha1_starts lwip_psa_sha1_starts
+#define lwip_sha1_update lwip_psa_sha1_update
+#define lwip_sha1_finish lwip_psa_sha1_finish
+#define lwip_sha1_free lwip_psa_sha1_free
+
+/* DES/ARC4 not available via PSA - MS-CHAP/MPPE not supported */
+
+#else /* MBEDTLS_VERSION_MAJOR < 4 - use legacy mbedtls APIs */
+
 #include "mbedtls/des.h"
 #include "mbedtls/md5.h"
 #include "mbedtls/sha1.h"
@@ -139,6 +182,8 @@ extern "C" {
 #define lwip_arc4_crypt(context, buffer, length) mbedtls_arc4_crypt(context, length, buffer, buffer)
 #define lwip_arc4_free mbedtls_arc4_free
  */
+
+#endif /* MBEDTLS_VERSION_MAJOR >= 4 */
 
 #endif /* LWIP_USE_EXTERNAL_MBEDTLS */
 
