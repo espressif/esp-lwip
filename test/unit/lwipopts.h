@@ -36,6 +36,7 @@
 
 #define LWIP_IPV6                       1
 #define LWIP_ND6                        1
+#define LWIP_ND6_SUPPORT_RIO            1
 #define LWIP_IPV6_FORWARD               1
 
 #define LWIP_CHECKSUM_ON_COPY           1

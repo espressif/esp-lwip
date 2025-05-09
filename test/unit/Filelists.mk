@@ -45,6 +45,7 @@ TESTFILES=$(TESTDIR)/lwip_unittests.c \
 	$(TESTDIR)/etharp/test_etharp.c \
 	$(TESTDIR)/ip4/test_ip4.c \
 	$(TESTDIR)/ip6/test_ip6.c \
+	$(TESTDIR)/ip6/test_ip6_nd6.c \
 	$(TESTDIR)/ip6/test_ip6_route.c \
 	$(TESTDIR)/mdns/test_mdns.c \
 	$(TESTDIR)/mqtt/test_mqtt.c \

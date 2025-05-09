@@ -2,6 +2,7 @@
 
 #include "ip4/test_ip4.h"
 #include "ip6/test_ip6.h"
+#include "ip6/test_ip6_nd6.h"
 #include "ip6/test_ip6_route.h"
 #include "udp/test_udp.h"
 #include "tcp/test_tcp.h"
@@ -97,6 +98,7 @@ int main(void)
 #ifndef ESP_TEST_DEBUG
     ip4_suite,
     ip6_suite,
+    ip6_nd6_suite,
     udp_suite,
     tcp_suite,
     tcp_oos_suite,

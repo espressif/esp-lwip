@@ -29,6 +29,7 @@ set(LWIP_TESTFILES
 	${LWIP_TESTDIR}/etharp/test_etharp.c
 	${LWIP_TESTDIR}/ip4/test_ip4.c
 	${LWIP_TESTDIR}/ip6/test_ip6.c
+	${LWIP_TESTDIR}/ip6/test_ip6_nd6.c
 	${LWIP_TESTDIR}/ip6/test_ip6_route.c
 	${LWIP_TESTDIR}/mdns/test_mdns.c
 	${LWIP_TESTDIR}/mqtt/test_mqtt.c
