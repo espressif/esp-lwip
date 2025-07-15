@@ -2,26 +2,27 @@ stages:
   - host_test
   - deploy
 
-image: ${CI_DOCKER_REGISTRY}/esp-env-v5.0:2
+image: espressif/idf:latest
 
 variables:
-  CMAKE_SH: cmake-3.22.3-linux-x86_64.sh
   CC: cc
 
 before_script:
   # Use CI Tools
   - curl -sSL ${CIT_LOADER_URL} | sh
   - source citools/import_functions
+  - if [ "$CC" == "clang" ]; then apt update -y && apt install -y clang; fi
 
-.get_cmake: &get_cmake |
-  wget -q https://github.com/Kitware/CMake/releases/download/v3.22.3/${CMAKE_SH}
-  mkdir -p /opt/cmake && sh ${CMAKE_SH} --prefix=/opt/cmake --skip-license
-  export PATH=/opt/cmake/bin:$PATH
+.get_doxygen: &get_doxygen |
+  apt update -y && apt install -y doxygen
 
 run_unittests:
   stage: host_test
   tags:
     - host_test
+  parallel:
+    matrix:
+      - CC: [cc, clang]
   dependencies: []
   script:
     - ./test/ci/unit_tests.sh
@@ -30,7 +31,11 @@ build_all:
   stage: host_test
   tags:
     - host_test
+  parallel:
+    matrix:
+      - CC: [cc, clang]
   script:
+    - *get_doxygen
     - cp contrib/examples/example_app/lwipcfg.h.ci contrib/examples/example_app/lwipcfg.h
     - mkdir build && cd build && cmake .. -G Ninja
     - cmake --build .
@@ -47,8 +52,10 @@ run_test_apps:
   stage: host_test
   tags:
     - host_test
+  parallel:
+    matrix:
+      - CC: [cc, clang]
   script:
-    - *get_cmake
     - ./test/ci/test_apps.sh
 
 .add_gh_key_remote: &add_gh_key_remote |
@@ -73,4 +80,3 @@ push_master_to_github:
     - *add_gh_key_remote
     - "[ -n \"${CI_COMMIT_TAG:-}\" ] && git push github ${CI_COMMIT_TAG}"
     - "[ -z \"${CI_COMMIT_TAG:-}\" ] && git push github ${CI_COMMIT_SHA}:refs/heads/${CI_COMMIT_REF_NAME}"
-
