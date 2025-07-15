@@ -38,7 +38,7 @@ typedef enum {
     PACKET_PBUF_REF
 } packet_type_t;
 
-unsigned char *packet_buffer[1518];
+static unsigned char *packet_buffer[1518];
 static int random_mock = -1;
 /* Mock the esp-random to return 0 for easier result checking */
 uint32_t esp_random(void) 

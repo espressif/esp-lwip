@@ -20,7 +20,7 @@ static int ap_cnt = 0;
 static int sta_cnt = 0;
 static u8_t ap_output_p_type_internal = (PBUF_TYPE_FLAG_STRUCT_DATA_CONTIGUOUS | PBUF_TYPE_ALLOC_SRC_MASK_STD_HEAP);
 static u8_t sta_output_p_type_internal = (PBUF_TYPE_FLAG_STRUCT_DATA_CONTIGUOUS | PBUF_TYPE_ALLOC_SRC_MASK_STD_HEAP);
-unsigned char packet_buffer[sizeof(struct ip6_hdr) + IP6_PAYLOAD_LEN];
+static unsigned char packet_buffer[sizeof(struct ip6_hdr) + IP6_PAYLOAD_LEN];
 
 /* Setups/teardown functions */
 static void
