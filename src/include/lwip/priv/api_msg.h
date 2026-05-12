@@ -166,6 +166,13 @@ struct api_msg {
     it has its own struct (to avoid struct api_msg getting bigger than necessary).
     lwip_netconn_do_gethostbyname must be called using tcpip_callback instead of tcpip_apimsg
     (see netconn_gethostbyname). */
+#if LWIP_MPU_COMPATIBLE && (DNS_MAX_HOST_IP > 1)
+/* When LWIP_MPU_COMPATIBLE is enabled dns_api_msg embeds a single ip_addr_t
+   (not a pointer), so the multi-address copy loop in lwip_netconn_do_dns_found
+   would overflow into adjacent struct members.  Either disable MPU compat or
+   keep DNS_MAX_HOST_IP == 1 until dns_api_msg is extended to an array. */
+#error "DNS_MAX_HOST_IP > 1 is not supported with LWIP_MPU_COMPATIBLE"
+#endif
 struct dns_api_msg {
   /** Hostname to query or dotted IP address string */
 #if LWIP_MPU_COMPATIBLE
@@ -179,6 +186,8 @@ struct dns_api_msg {
   /** Type of resolve call */
   u8_t dns_addrtype;
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
+  /** Number of addresses requested */
+  u8_t addr_cnt;
   /** This semaphore is posted when the name is resolved, the application thread
       should wait on it. */
   sys_sem_t API_MSG_M_DEF_SEM(sem);
