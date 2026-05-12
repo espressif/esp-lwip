@@ -2212,7 +2212,7 @@ lwip_netconn_do_dns_found(const char *name, const ip_addr_t *ipaddr, void *arg)
     /* address was resolved */
     API_EXPR_DEREF(msg->err) = ERR_OK;
 
-    for (i=0; i<DNS_MAX_HOST_IP; i++) {
+    for (i=0; i<msg->addr_cnt; i++) {
       API_EXPR_DEREF(msg->addr+i) = *(ipaddr+i);
     }
   }
@@ -2237,8 +2237,8 @@ lwip_netconn_do_gethostbyname(void *arg)
     LWIP_DNS_ADDRTYPE_DEFAULT;
 #endif
 
-  API_EXPR_DEREF(msg->err) = dns_gethostbyname_addrtype(msg->name,
-                             API_EXPR_REF(msg->addr), lwip_netconn_do_dns_found, msg, addrtype);
+  API_EXPR_DEREF(msg->err) = dns_gethostbyname_addrtype_n(msg->name,
+                             API_EXPR_REF(msg->addr), msg->addr_cnt, lwip_netconn_do_dns_found, msg, addrtype);
 #if LWIP_TCPIP_CORE_LOCKING
   /* For core locking, only block if we need to wait for answer/timeout */
   if (API_EXPR_DEREF(msg->err) == ERR_INPROGRESS) {

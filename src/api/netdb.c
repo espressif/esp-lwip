@@ -115,7 +115,7 @@ lwip_gethostbyname(const char *name)
   HOSTENT_STORAGE char s_hostname[DNS_MAX_NAME_LENGTH + 1];
 
   /* query host IP address */
-  err = netconn_gethostbyname(name, addr);
+  err = netconn_gethostbyname_n(name, addr, DNS_MAX_HOST_IP);
   if (err != ERR_OK) {
     LWIP_DEBUGF(DNS_DEBUG, ("lwip_gethostbyname(%s) failed, err=%d\n", name, err));
     h_errno = HOST_NOT_FOUND;
@@ -492,7 +492,7 @@ lwip_getaddrinfo(const char *nodename, const char *servname,
 #endif /* ESP_LWIP */
       }
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
-      err = netconn_gethostbyname_addrtype(nodename, addr, type);
+      err = netconn_gethostbyname_addrtype_n(nodename, addr, DNS_MAX_HOST_IP, type);
       if (err != ERR_OK) {
         return EAI_FAIL;
       }

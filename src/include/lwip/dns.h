@@ -111,6 +111,25 @@ err_t            dns_gethostbyname(const char *hostname, ip_addr_t *addr,
 err_t            dns_gethostbyname_addrtype(const char *hostname, ip_addr_t *addr,
                                    dns_found_callback found, void *callback_arg,
                                    u8_t dns_addrtype);
+/**
+ * @ingroup dns
+ * Like dns_gethostbyname_addrtype, but can return multiple addresses:
+ * @param hostname the hostname that is to be queried
+ * @param addr pointer to an array of ip_addr_t where to store the addresses if they are already
+ *             cached in the dns_table (only valid if ERR_OK is returned!)
+ * @param addr_cnt number of addresses requested; must be > 0 and <= DNS_MAX_HOST_IP
+ * @param found a callback function to be called on success, failure or timeout (only if
+ *              ERR_INPROGRESS is returned!)
+ * @param callback_arg argument to pass to the callback function
+ * @param dns_addrtype - LWIP_DNS_ADDRTYPE_IPV4_IPV6: try to resolve IPv4 first, try IPv6 if IPv4 fails only
+ *                     - LWIP_DNS_ADDRTYPE_IPV6_IPV4: try to resolve IPv6 first, try IPv4 if IPv6 fails only
+ *                     - LWIP_DNS_ADDRTYPE_IPV4: try to resolve IPv4 only
+ *                     - LWIP_DNS_ADDRTYPE_IPV6: try to resolve IPv6 only
+ * @return ERR_ARG if addr_cnt is 0 or greater than DNS_MAX_HOST_IP (among other invalid parameters)
+ */
+err_t            dns_gethostbyname_addrtype_n(const char *hostname, ip_addr_t *addr, u8_t addr_cnt,
+                                   dns_found_callback found, void *callback_arg,
+                                   u8_t dns_addrtype);
 void             dns_clear_cache(void);
 
 #if DNS_LOCAL_HOSTLIST

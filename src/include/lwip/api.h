@@ -358,10 +358,14 @@ err_t   netconn_join_leave_group_netif(struct netconn *conn, const ip_addr_t *mu
 #endif /* LWIP_IGMP || (LWIP_IPV6 && LWIP_IPV6_MLD) */
 #if LWIP_DNS
 #if LWIP_IPV4 && LWIP_IPV6
+err_t   netconn_gethostbyname_addrtype_n(const char *name, ip_addr_t *addr, u8_t addr_cnt, u8_t dns_addrtype);
 err_t   netconn_gethostbyname_addrtype(const char *name, ip_addr_t *addr, u8_t dns_addrtype);
+#define netconn_gethostbyname_n(name, addr, addr_cnt) netconn_gethostbyname_addrtype_n(name, addr, addr_cnt, NETCONN_DNS_DEFAULT)
 #define netconn_gethostbyname(name, addr) netconn_gethostbyname_addrtype(name, addr, NETCONN_DNS_DEFAULT)
 #else /* LWIP_IPV4 && LWIP_IPV6 */
+err_t   netconn_gethostbyname_n(const char *name, ip_addr_t *addr, u8_t addr_cnt);
 err_t   netconn_gethostbyname(const char *name, ip_addr_t *addr);
+#define netconn_gethostbyname_addrtype_n(name, addr, addr_cnt, dns_addrtype) netconn_gethostbyname_n(name, addr, addr_cnt)
 #define netconn_gethostbyname_addrtype(name, addr, dns_addrtype) netconn_gethostbyname(name, addr)
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
 #endif /* LWIP_DNS */

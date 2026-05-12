@@ -1272,9 +1272,46 @@ netconn_join_leave_group_netif(struct netconn *conn,
 /** @param dns_addrtype IP address type (IPv4 / IPv6) */
 err_t
 netconn_gethostbyname_addrtype(const char *name, ip_addr_t *addr, u8_t dns_addrtype)
+{
+  return netconn_gethostbyname_addrtype_n(name, addr, 1, dns_addrtype);
+}
+
+/**
+ * @ingroup netconn_common
+ * Execute a DNS query, can return multiple IP addresses
+ *
+ * @param name a string representation of the DNS host name to query
+ * @param addr a preallocated array of ip_addr_t where to store the resolved IP addresses
+ * @param addr_cnt number of addresses requested; must be > 0 and <= DNS_MAX_HOST_IP
+ * @param dns_addrtype IP address type (IPv4 / IPv6)
+ * @return ERR_OK: resolving succeeded
+ *         ERR_MEM: memory error, try again later
+ *         ERR_ARG: dns client not initialized, invalid hostname, or invalid addr_cnt
+ *         ERR_VAL: dns server response was invalid
+ */
+err_t
+netconn_gethostbyname_addrtype_n(const char *name, ip_addr_t *addr, u8_t addr_cnt, u8_t dns_addrtype)
 #else
 err_t
 netconn_gethostbyname(const char *name, ip_addr_t *addr)
+{
+  return netconn_gethostbyname_n(name, addr, 1);
+}
+
+/**
+ * @ingroup netconn_common
+ * Execute a DNS query, can return multiple IP addresses
+ *
+ * @param name a string representation of the DNS host name to query
+ * @param addr a preallocated array of ip_addr_t where to store the resolved IP addresses
+ * @param addr_cnt number of addresses requested; must be > 0 and <= DNS_MAX_HOST_IP
+ * @return ERR_OK: resolving succeeded
+ *         ERR_MEM: memory error, try again later
+ *         ERR_ARG: dns client not initialized, invalid hostname, or invalid addr_cnt
+ *         ERR_VAL: dns server response was invalid
+ */
+err_t
+netconn_gethostbyname_n(const char *name, ip_addr_t *addr, u8_t addr_cnt)
 #endif
 {
   API_VAR_DECLARE(struct dns_api_msg, msg);
@@ -1286,6 +1323,9 @@ netconn_gethostbyname(const char *name, ip_addr_t *addr)
 
   LWIP_ERROR("netconn_gethostbyname: invalid name", (name != NULL), return ERR_ARG;);
   LWIP_ERROR("netconn_gethostbyname: invalid addr", (addr != NULL), return ERR_ARG;);
+  if ((addr_cnt == 0) || (addr_cnt > DNS_MAX_HOST_IP)) {
+    return ERR_ARG;
+  }
 #if LWIP_MPU_COMPATIBLE
   if (strlen(name) >= DNS_MAX_NAME_LENGTH) {
     return ERR_ARG;
@@ -1314,6 +1354,7 @@ netconn_gethostbyname(const char *name, ip_addr_t *addr)
   API_VAR_REF(msg).addr = API_VAR_REF(addr);
   API_VAR_REF(msg).name = name;
 #endif /* LWIP_MPU_COMPATIBLE */
+  API_VAR_REF(msg).addr_cnt = addr_cnt;
 #if LWIP_IPV4 && LWIP_IPV6
   API_VAR_REF(msg).dns_addrtype = dns_addrtype;
 #endif /* LWIP_IPV4 && LWIP_IPV6 */

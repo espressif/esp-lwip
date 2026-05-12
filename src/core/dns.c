@@ -693,7 +693,7 @@ dns_local_addhost(const char *hostname, const ip_addr_t *addr)
  * @return ERR_OK if found, ERR_ARG if not found
  */
 static err_t
-dns_lookup(const char *name, size_t hostnamelen, ip_addr_t *addr LWIP_DNS_ADDRTYPE_ARG(u8_t dns_addrtype))
+dns_lookup(const char *name, size_t hostnamelen, ip_addr_t *addr LWIP_DNS_ADDRTYPE_ARG(u8_t dns_addrtype), u8_t addr_cnt)
 {
   size_t namelen;
 #if DNS_LOCAL_HOSTLIST
@@ -722,7 +722,7 @@ dns_lookup(const char *name, size_t hostnamelen, ip_addr_t *addr LWIP_DNS_ADDRTY
             if (LWIP_DNS_ADDRTYPE_MATCH_IP(dns_addrtype, dns_table[i].ipaddr[j])) {
               ip_addr_debug_print_val(DNS_DEBUG, dns_table[i].ipaddr[j]);
               LWIP_DEBUGF(DNS_DEBUG, ("\n"));
-              if (addr) {
+              if (addr && out_idx < addr_cnt) {
                 ip_addr_copy(addr[out_idx], dns_table[i].ipaddr[j]);
                 out_idx++;
               }
@@ -1625,6 +1625,12 @@ dns_enqueue(const char *name, size_t hostnamelen, dns_found_callback found,
   entry->state = DNS_STATE_NEW;
   entry->seqno = dns_seqno;
   entry->ipaddr_cnt = 0;
+  {
+    u8_t j;
+    for (j = 0; j < DNS_MAX_HOST_IP; j++) {
+      ip_addr_set_zero(&entry->ipaddr[j]);
+    }
+  }
   LWIP_DNS_SET_ADDRTYPE(entry->reqaddrtype, dns_addrtype);
   LWIP_DNS_SET_ADDRTYPE(req->reqaddrtype, dns_addrtype);
   req->found = found;
@@ -1708,7 +1714,7 @@ static bool dns_server_is_set (void)
  * @ingroup dns
  * Like dns_gethostbyname, but returned address type can be controlled:
  * @param hostname the hostname that is to be queried
- * @param addr pointer to an array of ip_addr_t where to store the addresses if they are already
+ * @param addr pointer to an ip_addr_t where to store the address if it is already
  *             cached in the dns_table (only valid if ERR_OK is returned!)
  * @param found a callback function to be called on success, failure or timeout (only if
  *              ERR_INPROGRESS is returned!)
@@ -1722,6 +1728,29 @@ err_t
 dns_gethostbyname_addrtype(const char *hostname, ip_addr_t *addr, dns_found_callback found,
                            void *callback_arg, u8_t dns_addrtype)
 {
+  return dns_gethostbyname_addrtype_n(hostname, addr, 1, found, callback_arg, dns_addrtype);
+}
+
+/**
+ * @ingroup dns
+ * Like dns_gethostbyname_addrtype, but can return multiple addresses:
+ * @param hostname the hostname that is to be queried
+ * @param addr pointer to an array of ip_addr_t where to store the addresses if they are already
+ *             cached in the dns_table (only valid if ERR_OK is returned!)
+ * @param addr_cnt number of addresses requested; must be > 0 and <= DNS_MAX_HOST_IP
+ * @param found a callback function to be called on success, failure or timeout (only if
+ *              ERR_INPROGRESS is returned!)
+ * @param callback_arg argument to pass to the callback function
+ * @param dns_addrtype - LWIP_DNS_ADDRTYPE_IPV4_IPV6: try to resolve IPv4 first, try IPv6 if IPv4 fails only
+ *                     - LWIP_DNS_ADDRTYPE_IPV6_IPV4: try to resolve IPv6 first, try IPv4 if IPv6 fails only
+ *                     - LWIP_DNS_ADDRTYPE_IPV4: try to resolve IPv4 only
+ *                     - LWIP_DNS_ADDRTYPE_IPV6: try to resolve IPv6 only
+ * @return ERR_ARG if addr_cnt is 0 or greater than DNS_MAX_HOST_IP (among other invalid parameters)
+ */
+err_t
+dns_gethostbyname_addrtype_n(const char *hostname, ip_addr_t *addr, u8_t addr_cnt, dns_found_callback found,
+                           void *callback_arg, u8_t dns_addrtype)
+{
   size_t hostnamelen;
 #if LWIP_DNS_SUPPORT_MDNS_QUERIES
   u8_t is_mdns;
@@ -1730,6 +1759,9 @@ dns_gethostbyname_addrtype(const char *hostname, ip_addr_t *addr, dns_found_call
    * or invalid hostname or invalid hostname length */
   if ((addr == NULL) ||
       (!hostname) || (!hostname[0])) {
+    return ERR_ARG;
+  }
+  if ((addr_cnt == 0) || (addr_cnt > DNS_MAX_HOST_IP)) {
     return ERR_ARG;
   }
 #if ((LWIP_DNS_SECURE & LWIP_DNS_SECURE_RAND_SRC_PORT) == 0)
@@ -1773,7 +1805,7 @@ dns_gethostbyname_addrtype(const char *hostname, ip_addr_t *addr, dns_found_call
     }
   }
   /* already have this address cached? */
-  if (dns_lookup(hostname, hostnamelen, addr LWIP_DNS_ADDRTYPE_ARG(dns_addrtype)) == ERR_OK) {
+  if (dns_lookup(hostname, hostnamelen, addr LWIP_DNS_ADDRTYPE_ARG(dns_addrtype), addr_cnt) == ERR_OK) {
     return ERR_OK;
   }
 #if LWIP_IPV4 && LWIP_IPV6
@@ -1785,7 +1817,7 @@ dns_gethostbyname_addrtype(const char *hostname, ip_addr_t *addr, dns_found_call
     } else {
       fallback = LWIP_DNS_ADDRTYPE_IPV4;
     }
-    if (dns_lookup(hostname, hostnamelen, addr LWIP_DNS_ADDRTYPE_ARG(fallback)) == ERR_OK) {
+    if (dns_lookup(hostname, hostnamelen, addr LWIP_DNS_ADDRTYPE_ARG(fallback), addr_cnt) == ERR_OK) {
       return ERR_OK;
     }
   }
