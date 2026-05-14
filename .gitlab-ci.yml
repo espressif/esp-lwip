@@ -69,6 +69,8 @@ run_test_apps:
 
 push_master_to_github:
   stage: deploy
+  tags:
+    - github_sync
   only:
     - 2.1.2-esp
     - 2.1.3-esp
