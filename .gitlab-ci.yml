@@ -2,7 +2,7 @@ stages:
   - host_test
   - deploy
 
-image: ${CI_DOCKER_REGISTRY}/esp-env-v5.0:2
+image: espressif/idf:latest
 
 variables:
   LWIP_CONTRIB_TAG: STABLE-2_1_0_RELEASE
@@ -44,6 +44,7 @@ build_all:
   tags:
     - host_test
   script:
+    - apt update -y && apt install -y doxygen
     - *get_cmake
     - mkdir build && cd build && cmake .. -G Ninja
     - cmake --build .
@@ -77,6 +78,8 @@ run_test_apps:
 
 push_master_to_github:
   stage: deploy
+  tags:
+    - github_sync
   only:
     - 2.1.2-esp
     - 2.1.3-esp
