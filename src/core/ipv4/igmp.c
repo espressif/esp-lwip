@@ -479,6 +479,24 @@ igmp_joingroup(const ip4_addr_t *ifaddr, const ip4_addr_t *groupaddr)
   return err;
 }
 
+
+#if LWIP_IGMP
+{
+  int netif_count = 0;
+  struct netif *tmp;
+  NETIF_FOREACH(tmp) {
+    if ((tmp->flags & NETIF_FLAG_IGMP) && ip4_addr_isany(ifaddr)) {
+      netif_count++;
+    }
+  }
+  if (netif_count > 1) {
+    LWIP_DEBUGF(IGMP_DEBUG,
+      ("igmp_joingroup: INADDR_ANY matches %d netifs; "
+       "prefer explicit interface IP to avoid IGMP snooping issues\n", netif_count));
+  }
+}
+#endif
+
 /**
  * @ingroup igmp
  * Join a group on one network interface.
