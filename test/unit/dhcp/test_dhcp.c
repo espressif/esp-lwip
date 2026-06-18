@@ -1270,6 +1270,58 @@ START_TEST(test_options)
 }
 END_TEST
 
+#if ESP_LWIP && LWIP_DHCP_ENABLE_MTU_UPDATE
+START_TEST(test_dhcp_mtu_validation)
+{
+  struct pbuf *p;
+  ip4_addr_t addr;
+  ip4_addr_t netmask;
+  ip4_addr_t gw;
+  static const u8_t invalid_mtu_opts[][2] = {
+    { 0x00, 0x00 }, /* MTU 0 */
+    { 0x00, 0x01 }, /* MTU 1 */
+    { 0x00, 0x43 }, /* MTU 67 (below RFC 2132 minimum of 68) */
+  };
+  int i;
+
+  LWIP_UNUSED_ARG(_i);
+
+  IP4_ADDR(&addr, 0, 0, 0, 0);
+  IP4_ADDR(&netmask, 0, 0, 0, 0);
+  IP4_ADDR(&gw, 0, 0, 0, 0);
+
+  net_test.mtu = 1500;
+  netif_add(&net_test, &addr, &netmask, &gw, &net_test, testif_init, ethernet_input);
+  netif_set_link_up(&net_test);
+  netif_set_up(&net_test);
+  dhcp_start(&net_test);
+
+  for (i = 0; i < 3; i++) {
+    p = pbuf_alloc(PBUF_RAW, 2, PBUF_RAM);
+    fail_unless(p != NULL);
+    memcpy(p->payload, invalid_mtu_opts[i], 2);
+    dhcp_parse_extra_opts(netif_dhcp_data(&net_test), DHCP_STATE_REQUESTING,
+                          DHCP_OPTION_MTU, 2, p, 0);
+    fail_unless(net_test.mtu == 1500);
+    pbuf_free(p);
+  }
+
+  p = pbuf_alloc(PBUF_RAW, 2, PBUF_RAM);
+  fail_unless(p != NULL);
+  ((u8_t *)p->payload)[0] = 0x02; /* MTU 512 */
+  ((u8_t *)p->payload)[1] = 0x00;
+  dhcp_parse_extra_opts(netif_dhcp_data(&net_test), DHCP_STATE_REQUESTING,
+                        DHCP_OPTION_MTU, 2, p, 0);
+  fail_unless(net_test.mtu == 512);
+  pbuf_free(p);
+
+  dhcp_stop(&net_test);
+  dhcp_cleanup(&net_test);
+  netif_remove(&net_test);
+}
+END_TEST
+#endif /* ESP_LWIP && LWIP_DHCP_ENABLE_MTU_UPDATE */
+
 /** Create the suite including all tests for this module */
 Suite *
 dhcp_suite(void)
@@ -1281,6 +1333,9 @@ dhcp_suite(void)
     TESTFUNC(test_dhcp_nak_no_endmarker),
     TESTFUNC(test_dhcp_invalid_overload),
     TESTFUNC(test_options)
+#if ESP_LWIP && LWIP_DHCP_ENABLE_MTU_UPDATE
+    , TESTFUNC(test_dhcp_mtu_validation)
+#endif
   };
   return create_suite("DHCP", tests, sizeof(tests)/sizeof(testfunc), dhcp_setup, dhcp_teardown);
 }
