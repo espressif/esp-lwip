@@ -93,9 +93,21 @@ vj_compress_init(struct vjcompress *comp)
   } \
 }
 
+#define VJ_CP_OFFSET(n0_, cp_) ((u16_t)((cp_) - (u8_t *)(n0_)->payload))
+
+#define VJ_CHECK_REMAIN(n0_, cp_, need_) \
+  do { \
+    if (VJ_CP_OFFSET((n0_), (cp_)) + (need_) > (n0_)->len) { \
+      goto bad; \
+    } \
+  } while (0)
+
 #define DECODEL(f) { \
+  VJ_CHECK_REMAIN(n0, cp, 1); \
   if (*cp == 0) {\
-    u32_t tmp_ = lwip_ntohl(f) + ((cp[1] << 8) | cp[2]); \
+    u32_t tmp_; \
+    VJ_CHECK_REMAIN(n0, cp, 3); \
+    tmp_ = lwip_ntohl(f) + ((cp[1] << 8) | cp[2]); \
     (f) = lwip_htonl(tmp_); \
     cp += 3; \
   } else { \
@@ -105,8 +117,11 @@ vj_compress_init(struct vjcompress *comp)
 }
 
 #define DECODES(f) { \
+  VJ_CHECK_REMAIN(n0, cp, 1); \
   if (*cp == 0) {\
-    u16_t tmp_ = lwip_ntohs(f) + (((u16_t)cp[1] << 8) | cp[2]); \
+    u32_t tmp_; \
+    VJ_CHECK_REMAIN(n0, cp, 3); \
+    tmp_ = lwip_ntohs(f) + (((u16_t)cp[1] << 8) | cp[2]); \
     (f) = lwip_htons(tmp_); \
     cp += 3; \
   } else { \
@@ -116,7 +131,9 @@ vj_compress_init(struct vjcompress *comp)
 }
 
 #define DECODEU(f) { \
+  VJ_CHECK_REMAIN(n0, cp, 1); \
   if (*cp == 0) {\
+    VJ_CHECK_REMAIN(n0, cp, 3); \
     (f) = lwip_htons(((u16_t)cp[1] << 8) | cp[2]); \
     cp += 3; \
   } else { \
@@ -506,12 +523,14 @@ vj_uncompress_tcp(struct pbuf **nb, struct vjcompress *comp)
 
   INCR(vjs_compressedin);
   cp = (u8_t*)n0->payload;
+  VJ_CHECK_REMAIN(n0, cp, 1);
   changes = *cp++;
   if (changes & NEW_C) {
     /*
      * Make sure the state index is in range, then grab the state.
      * If we have a good state index, clear the 'discard' flag.
      */
+    VJ_CHECK_REMAIN(n0, cp, 1);
     if (*cp >= MAX_SLOTS) {
       PPPDEBUG(LOG_INFO, ("vj_uncompress_tcp: bad cid=%d\n", *cp));
       goto bad;
@@ -534,6 +553,7 @@ vj_uncompress_tcp(struct pbuf **nb, struct vjcompress *comp)
   cs = &comp->rstate[comp->last_recv];
   hlen = IPH_HL(&cs->cs_ip) << 2;
   th = (struct tcp_hdr *)&((u8_t*)&cs->cs_ip)[hlen];
+  VJ_CHECK_REMAIN(n0, cp, 2);
   th->chksum = lwip_htons((*cp << 8) | cp[1]);
   cp += 2;
   if (changes & TCP_PUSH_BIT) {
