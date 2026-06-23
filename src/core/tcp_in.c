@@ -1601,16 +1601,24 @@ tcp_receive(struct tcp_pcb *pcb)
           seqno = pcb->ooseq->tcphdr->seqno;
 #if ESP_LWIP
           if (pcb->rcv_wnd < TCP_TCPLEN(cseg)) {
+            struct tcp_seg trimmed = *cseg;
+            trimmed.len = (u16_t)pcb->rcv_wnd;
+            if((TCPH_FLAGS((cseg)->tcphdr) & TCP_SYN) || (TCPH_FLAGS((cseg)->tcphdr) & TCP_FIN)) {
+              if (trimmed.len > 0) {
+                trimmed.len--;
+              }
+            }
+            if (pcb->rcv_wnd < TCP_TCPLEN(&trimmed)) {
+              /* Cannot accept this segment yet (e.g. FIN/SYN with zero window) */
+              break;
+            }
             LWIP_DEBUGF(TCP_INPUT_DEBUG,
                       ("tcp_receive: OOSEQ packet out of wnd "
                        "seqno=%"U32_F" wnd =%"TCPWNDSIZE_F" len=%"U16_F
                        "snd_wl1=%"U32_F" snd_wl2 =%"U32_F" f = %"X16_F" tf=%"U16_F"\n",
                        seqno,pcb->rcv_wnd,cseg->len,pcb->snd_wl1,pcb->snd_wl1,
                        TCPH_FLAGS((cseg)->tcphdr),pcb->flags));
-              cseg->len = pcb->rcv_wnd;
-              if((TCPH_FLAGS((cseg)->tcphdr) & TCP_SYN) || (TCPH_FLAGS((cseg)->tcphdr) & TCP_FIN)) {
-                cseg->len -= 1;
-              }
+              cseg->len = trimmed.len;
               pbuf_realloc(cseg->p, cseg->len);
               tcp_segs_free(cseg->next);
               cseg->next = NULL;
@@ -1828,7 +1836,9 @@ tcp_receive(struct tcp_pcb *pcb)
                                   "snd_wl1=%"U32_F" snd_wl2 =%"U32_F" f = %"X16_F" tf=%"U16_F"\n",
                                    seqno,pcb->rcv_wnd,next->next->len,pcb->snd_wl1,pcb->snd_wl1,
                                    TCPH_FLAGS(next->next->tcphdr),pcb->flags));
-                      next->next->len -= 1;
+                      if (next->next->len > 0) {
+                        next->next->len -= 1;
+                      }
                     }
 #endif /* ESP_LWIP */
                     pbuf_realloc(next->next->p, next->next->len);

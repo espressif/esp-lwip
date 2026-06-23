@@ -985,6 +985,62 @@ FIN_TEST(test_tcp_recv_ooseq_double_FIN_13, 13)
 FIN_TEST(test_tcp_recv_ooseq_double_FIN_14, 14)
 FIN_TEST(test_tcp_recv_ooseq_double_FIN_15, 15)
 
+#if ESP_LWIP
+/** Drain OOSEQ FIN when rcv_wnd is zero after accepting in-sequence data.
+ *  Regression test for u16 underflow in ESP_LWIP OOSEQ window clamp (SEC-242). */
+START_TEST(test_tcp_recv_ooseq_fin_zero_rcv_wnd)
+{
+  struct test_tcp_counters counters;
+  struct tcp_pcb *pcb;
+  struct pbuf *pinseq, *p_fin_ooseq;
+  struct netif netif;
+  char data[4] = {1, 2, 3, 4};
+  char fin_data = 5;
+  LWIP_UNUSED_ARG(_i);
+
+  test_tcp_init_netif(&netif, NULL, &test_local_ip, &test_netmask);
+  memset(&counters, 0, sizeof(counters));
+  counters.expected_data_len = sizeof(data);
+  counters.expected_data = data;
+
+  pcb = test_tcp_new_counters_pcb(&counters);
+  EXPECT_RET(pcb != NULL);
+  tcp_set_state(pcb, ESTABLISHED, &test_local_ip, &test_remote_ip, TEST_LOCAL_PORT, TEST_REMOTE_PORT);
+
+  /* One data byte + FIN at seq 4 (not mergeable when only seq 0..3 are in-sequence). */
+  p_fin_ooseq = tcp_create_rx_segment(pcb, &fin_data, 1, 4, 0, TCP_ACK | TCP_FIN);
+  EXPECT_RET(p_fin_ooseq != NULL);
+  test_tcp_input(p_fin_ooseq, &netif);
+  EXPECT_OOSEQ(tcp_oos_count(pcb) == 1);
+  EXPECT_OOSEQ(tcp_oos_seg_seqno(pcb, 0) == 4);
+  EXPECT_OOSEQ(tcp_oos_seg_tcplen(pcb, 0) == 2);
+
+  /* Shrink window so in-sequence data exactly fills it. */
+  pcb->rcv_wnd = 4;
+  pcb->rcv_ann_wnd = 4;
+
+  pinseq = tcp_create_rx_segment(pcb, data, sizeof(data), 0, 0, TCP_ACK);
+  EXPECT_RET(pinseq != NULL);
+  test_tcp_input(pinseq, &netif);
+
+  EXPECT(counters.recv_calls == 1);
+  EXPECT(counters.recved_bytes == 4);
+  EXPECT(counters.close_calls == 0);
+  EXPECT(pcb->rcv_nxt == 4);
+  EXPECT(pcb->rcv_wnd == 0);
+  EXPECT_OOSEQ(tcp_oos_count(pcb) == 1);
+  EXPECT_OOSEQ(tcp_oos_seg_seqno(pcb, 0) == 4);
+  EXPECT_OOSEQ(tcp_oos_seg_tcplen(pcb, 0) == 2);
+
+  /* Free pcb before return so teardown does not invoke err callback with a
+   * stale pointer to stack-local counters (ASan stack-use-after-return). */
+  EXPECT(MEMP_STATS_GET(used, MEMP_TCP_PCB) == 1);
+  tcp_abort(pcb);
+  EXPECT(MEMP_STATS_GET(used, MEMP_TCP_PCB) == 0);
+}
+END_TEST
+#endif /* ESP_LWIP */
+
 
 /** Create the suite including all tests for this module */
 Suite *
@@ -1012,7 +1068,10 @@ tcp_oos_suite(void)
     TESTFUNC(test_tcp_recv_ooseq_double_FIN_12),
     TESTFUNC(test_tcp_recv_ooseq_double_FIN_13),
     TESTFUNC(test_tcp_recv_ooseq_double_FIN_14),
-    TESTFUNC(test_tcp_recv_ooseq_double_FIN_15)
+    TESTFUNC(test_tcp_recv_ooseq_double_FIN_15),
+#if ESP_LWIP
+    TESTFUNC(test_tcp_recv_ooseq_fin_zero_rcv_wnd),
+#endif /* ESP_LWIP */
   };
   return create_suite("TCP_OOS", tests, sizeof(tests)/sizeof(testfunc), tcp_oos_setup, tcp_oos_teardown);
 }
