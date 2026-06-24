@@ -2716,6 +2716,17 @@
 #endif
 
 /**
+ * LWIP_ND6_SUPPORT_STATIC_ENTRIES==1: enable nd6_add_static_neighbor() and
+ * nd6_remove_static_neighbor() to manage permanent IPv6->MAC neighbor cache
+ * entries that bypass Neighbor Discovery (no NS/NA). IPv6 counterpart of
+ * ETHARP_SUPPORT_STATIC_ENTRIES. These functions must be called on the tcpip
+ * thread (or with the core lock held).
+ */
+#if !defined LWIP_ND6_SUPPORT_STATIC_ENTRIES || defined __DOXYGEN__
+#define LWIP_ND6_SUPPORT_STATIC_ENTRIES 0
+#endif
+
+/**
  * LWIP_ND6_NUM_ROUTES: number of entries in IPv6 route list.
  */
 #if !defined LWIP_ND6_NUM_ROUTES || defined __DOXYGEN__

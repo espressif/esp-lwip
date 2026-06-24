@@ -397,7 +397,11 @@ nd6_input(struct pbuf *p, struct netif *inp)
 
       /* This is an unsolicited NA, most likely there was a LLADDR change. */
       i = nd6_find_neighbor_cache_entry(&target_address);
-      if (i >= 0) {
+      if (i >= 0
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+          && (neighbor_cache[i].state != ND6_STATIC)
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
+         ) {
         if (na_hdr->flags & ND6_FLAG_OVERRIDE) {
           MEMCPY(neighbor_cache[i].lladdr, lladdr_opt->addr, inp->hwaddr_len);
         }
@@ -414,6 +418,14 @@ nd6_input(struct pbuf *p, struct netif *inp)
         pbuf_free(p);
         return;
       }
+
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+      if (neighbor_cache[i].state == ND6_STATIC) {
+        /* Never overwrite a static entry. */
+        pbuf_free(p);
+        return;
+      }
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
 
       /* Update cache entry. */
       if ((na_hdr->flags & ND6_FLAG_OVERRIDE) ||
@@ -1117,6 +1129,11 @@ nd6_tmr(void)
         nd6_send_neighbor_cache_probe(&neighbor_cache[i], 0);
       }
       break;
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+    case ND6_STATIC:
+      /* Static entries never expire and never trigger solicitations. */
+      break;
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
     case ND6_NO_ENTRY:
     default:
       /* Do nothing. */
@@ -1896,7 +1913,12 @@ nd6_select_router(const ip6_addr_t *ip6addr, struct netif *netif)
          * has no neighbor cache entry, due to the netif association tests. */
         if (default_router_list[i].neighbor_entry->state != ND6_INCOMPLETE) {
           /* Is the router known to be reachable? */
-          if (default_router_list[i].neighbor_entry->state == ND6_REACHABLE) {
+          if (default_router_list[i].neighbor_entry->state == ND6_REACHABLE
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+              /* A static entry is always reachable by definition. */
+              || default_router_list[i].neighbor_entry->state == ND6_STATIC
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
+             ) {
             return i; /* valid and reachable - done! */
           } else if (valid_router < 0) {
             valid_router = i; /* valid but not known to be reachable */
@@ -2555,7 +2577,11 @@ nd6_get_next_hop_addr_or_queue(struct netif *netif, struct pbuf *q, const ip6_ad
     neighbor_cache[i].counter.delay_time = LWIP_ND6_DELAY_FIRST_PROBE_TIME / ND6_TMR_INTERVAL;
   }
   /* @todo should we send or queue if PROBE? send for now, to let unicast NS pass. */
-  if ((neighbor_cache[i].state == ND6_REACHABLE) ||
+  if (
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+      (neighbor_cache[i].state == ND6_STATIC) ||
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
+      (neighbor_cache[i].state == ND6_REACHABLE) ||
       (neighbor_cache[i].state == ND6_DELAY) ||
       (neighbor_cache[i].state == ND6_PROBE)) {
 
@@ -2568,6 +2594,96 @@ nd6_get_next_hop_addr_or_queue(struct netif *netif, struct pbuf *q, const ip6_ad
   *hwaddrp = NULL;
   return nd6_queue_packet(i, q);
 }
+
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+/**
+ * Add or update a permanent (static) neighbor cache entry, bypassing Neighbor
+ * Discovery entirely: no Neighbor Solicitation/Advertisement is exchanged for
+ * this address. The entry is placed in the ND6_STATIC state, which the nd6 timer
+ * never ages, which the output path always treats as resolved, which incoming
+ * Neighbor Advertisements never overwrite, and which is never recycled to make
+ * room for dynamic entries. Call again with the same address to update the
+ * link-layer address. Intended for links where the peer's link-layer address is
+ * known a priori (for example, derived from a Modified EUI-64 interface
+ * identifier).
+ *
+ * This is the IPv6 counterpart of etharp_add_static_entry().
+ *
+ * Must be called from the tcpip thread (or with the core lock held).
+ *
+ * @param netif the netif on which the neighbor is reachable
+ * @param ip6addr the neighbor's IPv6 address (zoned to netif internally)
+ * @param lladdr the neighbor's link-layer address (netif->hwaddr_len bytes)
+ * @return ERR_OK if the static entry was added/updated, ERR_ARG on bad
+ *         arguments, ERR_MEM if the neighbor cache is full
+ */
+err_t
+nd6_add_static_neighbor(struct netif *netif, const ip6_addr_t *ip6addr, const u8_t *lladdr)
+{
+  ip6_addr_t target;
+  s8_t i;
+
+  LWIP_ASSERT_CORE_LOCKED();
+  LWIP_ERROR("nd6_add_static_neighbor: invalid arg",
+             (netif != NULL) && (ip6addr != NULL) && (lladdr != NULL), return ERR_ARG;);
+
+  /* Work on a properly zoned copy so lookup and storage are consistent. */
+  ip6_addr_set(&target, ip6addr);
+  ip6_addr_assign_zone(&target, IP6_UNICAST, netif);
+
+  i = nd6_find_neighbor_cache_entry(&target);
+  if (i < 0) {
+    i = nd6_new_neighbor_cache_entry();
+    if (i < 0) {
+      /* Neighbor cache is full. */
+      return ERR_MEM;
+    }
+    ip6_addr_copy(neighbor_cache[i].next_hop_address, target);
+    neighbor_cache[i].netif = netif;
+  }
+  MEMCPY(neighbor_cache[i].lladdr, lladdr, netif->hwaddr_len);
+  neighbor_cache[i].isrouter = 0;
+  neighbor_cache[i].state = ND6_STATIC;
+  return ERR_OK;
+}
+
+/**
+ * Remove a static neighbor cache entry previously added with
+ * nd6_add_static_neighbor(). Dynamic (non-static) entries are left untouched.
+ *
+ * This is the IPv6 counterpart of etharp_remove_static_entry().
+ *
+ * Must be called from the tcpip thread (or with the core lock held).
+ *
+ * @param netif the netif the entry was added on (used for address zoning)
+ * @param ip6addr the neighbor's IPv6 address
+ * @return ERR_OK if a static entry was removed, ERR_ARG on bad arguments,
+ *         ERR_VAL if no matching static entry exists
+ */
+err_t
+nd6_remove_static_neighbor(struct netif *netif, const ip6_addr_t *ip6addr)
+{
+  ip6_addr_t target;
+  s8_t i;
+
+  LWIP_ASSERT_CORE_LOCKED();
+  LWIP_ERROR("nd6_remove_static_neighbor: invalid arg",
+             (netif != NULL) && (ip6addr != NULL), return ERR_ARG;);
+
+  ip6_addr_set(&target, ip6addr);
+  ip6_addr_assign_zone(&target, IP6_UNICAST, netif);
+
+  i = nd6_find_neighbor_cache_entry(&target);
+  if ((i < 0) || (neighbor_cache[i].state != ND6_STATIC)) {
+    return ERR_VAL;
+  }
+  /* Clear isrouter (an RA may have set it), otherwise
+   * nd6_free_neighbor_cache_entry() silently refuses to free the entry. */
+  neighbor_cache[i].isrouter = 0;
+  nd6_free_neighbor_cache_entry(i);
+  return ERR_OK;
+}
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
 
 
 /**
@@ -2636,6 +2752,12 @@ nd6_reachability_hint(const ip6_addr_t *ip6addr)
   if (i < 0) {
     return;
   }
+
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+  if (neighbor_cache[i].state == ND6_STATIC) {
+    return; /* Static entries are always considered reachable. */
+  }
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
 
   /* For safety: don't set as reachable if we don't have a LL address yet. Misuse protection. */
   if (neighbor_cache[i].state == ND6_INCOMPLETE || neighbor_cache[i].state == ND6_NO_ENTRY) {

@@ -127,6 +127,10 @@ enum nd6_neighbor_cache_entry_state {
   ND6_STALE,
   ND6_DELAY,
   ND6_PROBE
+#if LWIP_ND6_SUPPORT_STATIC_ENTRIES
+  ,
+  ND6_STATIC
+#endif /* LWIP_ND6_SUPPORT_STATIC_ENTRIES */
 };
 
 #define ND6_HOPLIM 255 /* maximum hop limit, required in all ND packets */
