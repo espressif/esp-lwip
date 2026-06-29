@@ -2607,6 +2607,9 @@ nd6_get_next_hop_addr_or_queue(struct netif *netif, struct pbuf *q, const ip6_ad
  * known a priori (for example, derived from a Modified EUI-64 interface
  * identifier).
  *
+ * Like in IPv4, a static entry does not survive nd6_cleanup_netif() and must be
+ * re-added after the netif is brought back up.
+ *
  * This is the IPv6 counterpart of etharp_add_static_entry().
  *
  * Must be called from the tcpip thread (or with the core lock held).
@@ -2644,6 +2647,12 @@ nd6_add_static_neighbor(struct netif *netif, const ip6_addr_t *ip6addr, const u8
   MEMCPY(neighbor_cache[i].lladdr, lladdr, netif->hwaddr_len);
   neighbor_cache[i].isrouter = 0;
   neighbor_cache[i].state = ND6_STATIC;
+
+  /* Flush packets queued on a converted entry; a static entry never triggers
+   * nd6_send_q() from the timer or an incoming NA. */
+  if (neighbor_cache[i].q != NULL) {
+    nd6_send_q(i);
+  }
   return ERR_OK;
 }
 
