@@ -1255,6 +1255,14 @@ ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
   LWIP_DEBUGF(IP6_DEBUG, ("ip6_output_if: %c%c%"U16_F"\n", netif->name[0], netif->name[1], (u16_t)netif->num));
   ip6_debug_print(p);
 
+#ifdef LWIP_HOOK_IP6_OUTPUT
+  err_t err = ERR_OK;
+  if ((err = LWIP_HOOK_IP6_OUTPUT(p, src, dest, hl, tc, nexth, netif)) != ERR_OK)
+  {
+    return err;
+  }
+#endif
+
 #if ENABLE_LOOPBACK
   {
     int i;
