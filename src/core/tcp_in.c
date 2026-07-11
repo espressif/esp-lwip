@@ -1062,6 +1062,18 @@ tcp_process(struct tcp_pcb *pcb)
         LWIP_DEBUGF(TCP_DEBUG, ("TCP connection closed: LAST_ACK %"U16_F" -> %"U16_F".\n", inseg.tcphdr->src, inseg.tcphdr->dest));
         /* bugfix #21699: don't set pcb->state to CLOSED here or we risk leaking segments */
         recv_flags |= TF_CLOSED;
+        /* This ACK only acknowledges our own FIN (tcp_seg::len is always 0
+           for a FIN-only segment, see tcp_enqueue_flags()), so recv_acked
+           stays 0 and the TCP_EVENT_SENT sent-callback below is never
+           invoked. Without an explicit poll here, a netconn waiting on
+           lwip_netconn_do_close_internal() (registered via tcp_poll() while
+           closing was still pending) is never given a chance to notice
+           that the close has now completed before tcp_input_delayed_close()
+           frees this pcb, and the application's close() call hangs forever.
+           Mirror the TCP_POLL_LINGERING_CLOSE(pcb) call already used for
+           the equivalent FIN_WAIT_1/FIN_WAIT_2/CLOSING -> TIME_WAIT
+           transitions above. */
+        TCP_POLL_LINGERING_CLOSE(pcb);
       }
       break;
     default:
