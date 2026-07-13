@@ -758,6 +758,36 @@ ip_napt_modify_addr(struct ip_hdr *iphdr, ip4_addr_p_t *field, u32_t newval)
   field->addr = newval;
 }
 
+static int
+ip_napt_l4_fits(const struct pbuf *p, const struct ip_hdr *iphdr)
+{
+  u16_t ip_hlen = (u16_t)(IPH_HL(iphdr) * 4);
+  u16_t ip_len = lwip_ntohs(IPH_LEN(iphdr));
+  u16_t min_l4 = 0;
+
+  switch (IPH_PROTO(iphdr)) {
+#if LWIP_ICMP
+  case IP_PROTO_ICMP:
+    min_l4 = sizeof(struct icmp_echo_hdr);
+    break;
+#endif
+#if LWIP_TCP
+  case IP_PROTO_TCP:
+    min_l4 = TCP_HLEN;
+    break;
+#endif
+#if LWIP_UDP
+  case IP_PROTO_UDP:
+    min_l4 = UDP_HLEN;
+    break;
+#endif
+  default:
+    return 1;
+  }
+
+  return (u16_t)(ip_hlen + min_l4) <= ip_len && (u16_t)(ip_hlen + min_l4) <= p->len;
+}
+
 void
 ip_napt_recv(struct pbuf *p, struct ip_hdr *iphdr)
 {
@@ -767,6 +797,10 @@ ip_napt_recv(struct pbuf *p, struct ip_hdr *iphdr)
   struct ip_napt_entry *t;
   
   if (ip_napt_max == 0) return;
+
+  if (!ip_napt_l4_fits(p, iphdr)) {
+    return;
+  }
 
 #if LWIP_ICMP
   /* NAPT for ICMP Echo Request using identifier */
@@ -870,6 +904,10 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
 {
   if (!inp->napt)
     return ERR_OK;
+
+  if (!ip_napt_l4_fits(p, iphdr)) {
+    return ERR_RTE;
+  }
 
 #if LWIP_ICMP
   /* NAPT for ICMP Echo Request using identifier */
