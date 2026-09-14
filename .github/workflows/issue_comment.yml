@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Sync issue comments to JIRA
-        uses: espressif/github-actions/sync_issues_to_jira@master
+        uses: espressif/sync-jira-actions@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JIRA_PASS: ${{ secrets.JIRA_PASS }}
