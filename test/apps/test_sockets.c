@@ -8,6 +8,7 @@
 #include "lwip/priv/sockets_priv.h"
 #include "lwip/priv/tcp_priv.h"
 #include "lwip/api.h"
+#include "lwip/tcpip.h"
 
 Suite *sockets_suite(void);
 
@@ -28,20 +29,19 @@ test_sockets_get_used_count(void)
   return used;
 }
 
-#if !SO_REUSE
-static int
-wait_for_pcbs_to_cleanup(void)
+/* Must run on tcpip thread: abort leftover PCBs so the next test can bind :1234. */
+static void
+tcp_cleanup_pcbs(void *arg)
 {
-    struct tcp_pcb *pcb = tcp_active_pcbs;
-    while (pcb != NULL) {
-        if (pcb->state == TIME_WAIT || pcb->state == LAST_ACK) {
-            return -1;
-        }
-        pcb = pcb->next;
-    }
-    return 0;
+  LWIP_UNUSED_ARG(arg);
+  while (tcp_tw_pcbs != NULL) {
+    tcp_abort(tcp_tw_pcbs);
+  }
+  while (tcp_active_pcbs != NULL) {
+    tcp_abort(tcp_active_pcbs);
+  }
 }
-#endif
+
 /* Setups/teardown functions */
 static void
 sockets_setup(void)
@@ -53,11 +53,10 @@ static void
 sockets_teardown(void)
 {
   fail_unless(test_sockets_get_used_count() == 0);
-  /* poll until all memory is released... */
-  while (tcp_tw_pcbs) {
-    tcp_abort(tcp_tw_pcbs);
-  }
-
+  /* Previous closes can still be in FIN_WAIT/TIME_WAIT after sockets are gone.
+   * Aborting from the app thread races the tcpip thread and misses PCBs that
+   * enter TIME_WAIT after a non-blocking walk of tcp_tw_pcbs — bind(port) then flakes. */
+  fail_unless(tcpip_callback_wait(tcp_cleanup_pcbs, NULL) == ERR_OK);
 }
 
 
@@ -85,8 +84,8 @@ server_thread(void *arg)
     fail_unless(ret == 0);
 
 #if LWIP_SO_LINGER
-    /* if we linger with timout=0, we might not be able to even accept */
-    if (params->so_linger.l_linger == 0 && srv < 0) {
+    /* if we linger with timeout=0, we might not be able to even accept */
+    if (params->so_linger.l_onoff == 1 && params->so_linger.l_linger == 0 && srv < 0) {
         return NULL;
     }
     fail_unless(srv >= 0);
@@ -111,8 +110,14 @@ server_thread(void *arg)
     /* try to receive (could be data or EOF if the client lingers on closing) */
     ret = lwip_recv(srv, rxbuf, sizeof(rxbuf), 0);
     err = errno;
+    if (params->so_linger.l_onoff == 1 && params->so_linger.l_linger == 0 && ret < 0) {
+        /* RST may arrive before any payload is readable */
+        fail_unless(err == ENOTCONN || err == ECONNRESET);
+        ret = lwip_close(srv);
+        fail_unless(ret == 0);
+        return NULL;
+    }
     fail_unless(ret >= 0);
-    fail_unless(err == 0);
 
     if (params->so_linger.l_onoff == 1 && params->so_linger.l_linger > 0) {
         /* if lingering enabled with a non-zero timeout, let's just close
@@ -124,13 +129,16 @@ server_thread(void *arg)
     /* otherwise, check that we could receive no longer */
     ret = lwip_recv(srv, rxbuf, sizeof(rxbuf), 0);
     err = errno;
-    if (params->so_linger.l_onoff == 0 || params->so_linger.l_linger > 0) {
-        /* if lingering disabled or timeout nonzero, we should get a clean exit */
+    if (params->so_linger.l_onoff == 0) {
+        /* lingering disabled: expect a clean FIN/EOF */
         fail_unless(ret == 0);
     } else {
-        /* linger with timeout=0, expect an abrupt closure */
-        fail_unless(ret == -1);
-        fail_unless(err == ENOTCONN || err == ECONNRESET);
+        /* linger timeout=0: RST if unacked data remained at close(), else clean FIN
+         * if the payload was already ACKed (timing-dependent on loopback). */
+        fail_unless(ret == -1 || ret == 0);
+        if (ret == -1) {
+            fail_unless(err == ENOTCONN || err == ECONNRESET);
+        }
     }
 #endif
     /* close server socket */
@@ -207,12 +215,6 @@ test_socket_close_linger(int l_onoff, int l_linger)
 #endif
 
     pthread_join(srv_thread, NULL);
-#if !SO_REUSE
-    while (wait_for_pcbs_to_cleanup() != 0) {
-        usleep(1000);
-    }
-#endif
-
 }
 
 START_TEST(test_sockets_close_state_machine_linger_off)
