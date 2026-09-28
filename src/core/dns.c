@@ -1323,6 +1323,11 @@ dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, 
   struct dns_answer ans;
   struct dns_query qry;
   u16_t nquestions, nanswers;
+#if LWIP_IPV6
+  ip6_addr_t ll_addr;
+  u32_t ll_ttl;
+  u8_t have_ll;
+#endif /* LWIP_IPV6 */
 
   LWIP_UNUSED_ARG(arg);
   LWIP_UNUSED_ARG(pcb);
@@ -1413,6 +1418,12 @@ dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, 
           }
         } else {
           initial_ipaddr_cnt = entry->ipaddr_cnt;
+#if LWIP_IPV6
+          /* first link-local AAAA answer, used only if no other address is found */
+          ip6_addr_set_zero(&ll_addr);
+          ll_ttl = 0;
+          have_ll = 0;
+#endif /* LWIP_IPV6 */
           while ((nanswers > 0) && (res_idx < p->tot_len)) {
             /* skip answer resource record's host name */
             res_idx = dns_skip_name(p, res_idx);
@@ -1459,19 +1470,29 @@ dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, 
 #endif /* LWIP_IPV4 && LWIP_IPV6 */
                 {
                   ip6_addr_p_t ip6addr;
+                  ip6_addr_t ip6tmp;
                   /* read the IP address after answer resource record's header */
                   if (pbuf_copy_partial(p, &ip6addr, sizeof(ip6_addr_p_t), res_idx) != sizeof(ip6_addr_p_t)) {
                     goto ignore_packet; /* ignore this packet */
                   }
-                  /* @todo: scope ip6addr? Might be required for link-local addresses at least? */
-                  ip_addr_copy_from_ip6_packed(entry->ipaddr[entry->ipaddr_cnt], ip6addr);
+                  ip6_addr_copy_from_packed(ip6tmp, ip6addr);
+                  if (!ip6_addr_islinklocal(&ip6tmp)) {
+                    ip_addr_copy_from_ip6_packed(entry->ipaddr[entry->ipaddr_cnt], ip6addr);
 
-                  /* read the answer resource record's TTL, and maximize it if needed */
-                  entry->ttl[entry->ipaddr_cnt] = lwip_ntohl(ans.ttl);
-                  if (entry->ttl[entry->ipaddr_cnt] > DNS_MAX_TTL) {
-                    entry->ttl[entry->ipaddr_cnt] = DNS_MAX_TTL;
+                    /* read the answer resource record's TTL, and maximize it if needed */
+                    entry->ttl[entry->ipaddr_cnt] = lwip_ntohl(ans.ttl);
+                    if (entry->ttl[entry->ipaddr_cnt] > DNS_MAX_TTL) {
+                      entry->ttl[entry->ipaddr_cnt] = DNS_MAX_TTL;
+                    }
+                    entry->ipaddr_cnt++;
+                  } else if (!have_ll) {
+                    /* A link-local address is only usable with a zone, and a
+                       proxied (e.g. mDNS gateway) answer may even carry one from
+                       another link: keep it only as a fallback */
+                    ip6_addr_copy(ll_addr, ip6tmp);
+                    ll_ttl = lwip_ntohl(ans.ttl);
+                    have_ll = 1;
                   }
-                  entry->ipaddr_cnt++;
                 }
               }
 #endif /* LWIP_IPV6 */
@@ -1484,6 +1505,15 @@ dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, 
             --nanswers;
           }
 
+#if LWIP_IPV6
+          if ((initial_ipaddr_cnt == entry->ipaddr_cnt) && have_ll && (entry->ipaddr_cnt < DNS_MAX_HOST_IP)) {
+            /* only link-local answers: scope it to the netif the response came in on */
+            ip6_addr_assign_zone(&ll_addr, IP6_UNICAST, ip_current_input_netif());
+            ip_addr_copy_from_ip6(entry->ipaddr[entry->ipaddr_cnt], ll_addr);
+            entry->ttl[entry->ipaddr_cnt] = LWIP_MIN(ll_ttl, DNS_MAX_TTL);
+            entry->ipaddr_cnt++;
+          }
+#endif /* LWIP_IPV6 */
           if (initial_ipaddr_cnt < entry->ipaddr_cnt) {
             pbuf_free(p);
             /* handle correct response */
