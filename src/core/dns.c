@@ -885,6 +885,9 @@ dns_send(u8_t idx)
                                          SIZEOF_DNS_QUERY), PBUF_RAM);
   if (p != NULL) {
     const ip_addr_t *dst;
+#if LWIP_DNS_SUPPORT_MDNS_QUERIES && LWIP_IPV6 && LWIP_IPV6_SCOPES
+    ip_addr_t mquery_dst;
+#endif
     u16_t dst_port;
     /* fill dns header */
     memset(&hdr, 0, SIZEOF_DNS_HDR);
@@ -938,6 +941,16 @@ dns_send(u8_t idx)
 #if LWIP_IPV6
       if (LWIP_DNS_ADDRTYPE_IS_IPV6(entry->reqaddrtype)) {
         dst = &dns_mquery_v6group;
+#if LWIP_IPV6_SCOPES
+        /* ff02::fb is link-local scoped: without a zone, ip6_route() finds no
+           netif as soon as there is more than one (e.g. loopback), so the
+           query is never sent. Send it on the default netif, like IPv4 does. */
+        if (netif_default != NULL) {
+          ip_addr_copy(mquery_dst, dns_mquery_v6group);
+          ip6_addr_assign_zone(ip_2_ip6(&mquery_dst), IP6_MULTICAST, netif_default);
+          dst = &mquery_dst;
+        }
+#endif
       }
 #endif
 #if LWIP_IPV4 && LWIP_IPV6
