@@ -316,10 +316,9 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
   }
 #endif /* IP_FORWARD_ALLOW_TX_ON_RX_NETIF */
 
-  /* decrement TTL */
-  IPH_TTL_SET(iphdr, IPH_TTL(iphdr) - 1);
-  /* send ICMP if TTL == 0 */
-  if (IPH_TTL(iphdr) == 0) {
+  /* RFC 1812 5.3.1: discard if TTL would be reduced to zero (or less).
+   * Checked before decrementing, since a received TTL of 0 would wrap to 255. */
+  if (IPH_TTL(iphdr) <= 1) {
     MIB2_STATS_INC(mib2.ipinhdrerrors);
 #if LWIP_ICMP
     /* Don't send ICMP messages in response to ICMP messages */
@@ -329,6 +328,8 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
 #endif /* LWIP_ICMP */
     return;
   }
+  /* decrement TTL */
+  IPH_TTL_SET(iphdr, IPH_TTL(iphdr) - 1);
 
 #if ESP_LWIP
 #if IP_NAPT
