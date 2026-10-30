@@ -55,9 +55,8 @@
 #if LWIP_IPV6 && LWIP_IPV6_REASS  /* don't build if not configured for use in lwipopts.h */
 
 #if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
-#include "stdbool.h"
 #include "lwip/timeouts.h"
-static bool s_is_tmr_start = false;
+static u8_t s_is_tmr_start = 0;
 #endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
 
 /** Setting this to 0, you can turn off checking the fragments for overlapping
@@ -130,7 +129,7 @@ ip6_reass_tmr(void)
 {
   struct ip6_reassdata *r, *tmp;
 #if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
-  bool tmr_restart = false;
+  u8_t tmr_restart = 0;
 #endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
 
 #if !IPV6_FRAG_COPYHEADER
@@ -146,7 +145,7 @@ ip6_reass_tmr(void)
       r->timer--;
       r = r->next;
 #if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
-      tmr_restart = true;
+      tmr_restart = 1;
 #endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
     } else {
       /* reassembly timed out */
@@ -162,7 +161,7 @@ ip6_reass_tmr(void)
     sys_timeout(IP6_REASS_TMR_INTERVAL, ip6_reass_timeout_cb, NULL);
   } else {
     sys_untimeout(ip6_reass_timeout_cb, NULL);
-    s_is_tmr_start = false;
+    s_is_tmr_start = 0;
   }
 #endif/* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
 }
@@ -692,7 +691,7 @@ ip6_reass(struct pbuf *p)
 #if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
   if (!s_is_tmr_start) {
     sys_timeout(IP6_REASS_TMR_INTERVAL, ip6_reass_timeout_cb, NULL);
-    s_is_tmr_start = true;
+    s_is_tmr_start = 1;
   }
 #endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
   /* the datagram is not (yet?) reassembled completely */

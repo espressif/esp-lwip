@@ -88,8 +88,7 @@ static void mld6_delayed_report(struct mld_group *group, u16_t maxresp);
 static void mld6_send(struct netif *netif, struct mld_group *group, u8_t type);
 
 #if ESP_LWIP_MLD6_TIMERS_ONDEMAND
-#include <stdbool.h>
-static bool is_tmr_start = false;
+static u8_t is_tmr_start = 0;
 #endif
 
 /**
@@ -516,7 +515,7 @@ mld6_tmr(void)
 {
   struct netif *netif;
 #if ESP_LWIP_MLD6_TIMERS_ONDEMAND
-  bool tmr_restart = false;
+  u8_t tmr_restart = 0;
 #endif
 
   NETIF_FOREACH(netif) {
@@ -535,7 +534,7 @@ mld6_tmr(void)
         }
 #if ESP_LWIP_MLD6_TIMERS_ONDEMAND
         else {
-          tmr_restart = true;
+          tmr_restart = 1;
         }
 #endif
       }
@@ -547,7 +546,7 @@ mld6_tmr(void)
     sys_timeout(MLD6_TMR_INTERVAL, mld6_timeout_cb, NULL);
   } else {
     sys_untimeout(mld6_timeout_cb, NULL);
-    is_tmr_start = false;
+    is_tmr_start = 0;
   }
 #endif
 }
@@ -585,7 +584,7 @@ mld6_delayed_report(struct mld_group *group, u16_t maxresp_in)
 #if ESP_LWIP_MLD6_TIMERS_ONDEMAND
   if (!is_tmr_start) {
       sys_timeout(MLD6_TMR_INTERVAL, mld6_timeout_cb, NULL);
-      is_tmr_start = true;
+      is_tmr_start = 1;
   }
 #endif
   }

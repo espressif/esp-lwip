@@ -43,7 +43,7 @@
  * 3. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
@@ -577,7 +577,7 @@ dhcp_fine_tmr(void)
 {
   struct dhcp *dhcp;
 #if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
-  bool tmr_restart = false;
+  u8_t tmr_restart = 0;
 
   if (netif == NULL) {
     return;
@@ -596,7 +596,7 @@ dhcp_fine_tmr(void)
       if (dhcp->request_timeout > 1) {
         dhcp->request_timeout--;
 #if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
-        tmr_restart = true;
+        tmr_restart = 1;
 #endif
       } else if (dhcp->request_timeout == 1) {
         dhcp->request_timeout--;
@@ -605,7 +605,7 @@ dhcp_fine_tmr(void)
         /* this client's request timeout triggered */
         dhcp_timeout(netif);
 #if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND
-        tmr_restart = true;
+        tmr_restart = 1;
 #endif
       }
 #if ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND

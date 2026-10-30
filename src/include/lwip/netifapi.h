@@ -50,6 +50,11 @@ extern "C" {
 
 /* API for application */
 #if LWIP_ARP && LWIP_IPV4
+/**
+ * @defgroup netifapi_arp ARP
+ * @ingroup netifapi
+ * To be called from non-TCPIP threads
+ */
 /* Used for netfiapi_arp_* APIs */
 enum netifapi_arp_entry {
   NETIFAPI_ARP_PERM /* Permanent entry */

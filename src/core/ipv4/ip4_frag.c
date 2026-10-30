@@ -19,7 +19,7 @@
  * 3. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
@@ -55,8 +55,7 @@
 
 #if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
 #include "lwip/timeouts.h"
-#include "stdbool.h"
-static bool s_is_tmr_start = false;
+static u8_t s_is_tmr_start = 0;
 #endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
 
 /**
@@ -147,7 +146,7 @@ ip_reass_tmr(void)
 {
   struct ip_reassdata *r, *prev = NULL;
 #if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
-  bool tmr_restart = false;
+  u8_t tmr_restart = 0;
 #endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
 
   r = reassdatagrams;
@@ -160,7 +159,7 @@ ip_reass_tmr(void)
       prev = r;
       r = r->next;
 #if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
-      tmr_restart = true;
+      tmr_restart = 1;
 #endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
     } else {
       /* reassembly timed out */
@@ -178,7 +177,7 @@ ip_reass_tmr(void)
     sys_timeout(IP_TMR_INTERVAL, ip_reass_timeout_cb, NULL);
   } else {
     sys_untimeout(ip_reass_timeout_cb, NULL);
-    s_is_tmr_start = false;
+    s_is_tmr_start = 0;
   }
 #endif/* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
 }
@@ -707,7 +706,7 @@ ip4_reass(struct pbuf *p)
 #if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND 
   if (!s_is_tmr_start) {
     sys_timeout(IP_TMR_INTERVAL, ip_reass_timeout_cb, NULL);
-    s_is_tmr_start = true;
+    s_is_tmr_start = 1;
   }
 #endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
   /* the datagram is not (yet?) reassembled completely */
