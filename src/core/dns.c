@@ -57,7 +57,7 @@
  *    products derived from this software without specific prior
  *    written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS
  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
@@ -97,8 +97,7 @@
 #include "lwip/timeouts.h"
 
 #if ESP_LWIP_DNS_TIMERS_ONDEMAND
-#include "stdbool.h"
-static bool s_is_tmr_start = false;
+static u8_t s_is_tmr_start = 0;
 #endif /* ESP_LWIP_DNS_TIMERS_ONDEMAND */
 
 #if LWIP_DNS_SETSERVER_WITH_NETIF
@@ -106,9 +105,6 @@ static dns_setserver_callback_t s_dns_setserver_callback = NULL;
 #endif /* LWIP_DNS_SETSERVER_WITH_NETIF */
 
 #include <string.h>
-#if ESP_DNS
-#include <stdbool.h>
-#endif
 
 #ifdef LWIP_HOOK_FILENAME
 #include LWIP_HOOK_FILENAME
@@ -455,7 +451,7 @@ void
 dns_tmr(void)
 {
 #if ESP_LWIP_DNS_TIMERS_ONDEMAND
-  bool tmr_restart = false;
+  u8_t tmr_restart = 0;
   u8_t i = 0;
 #endif /* ESP_LWIP_DNS_TIMERS_ONDEMAND */
   LWIP_DEBUGF(DNS_DEBUG, ("dns_tmr: dns_check_entries\n"));
@@ -463,7 +459,7 @@ dns_tmr(void)
 #if ESP_LWIP_DNS_TIMERS_ONDEMAND
   for (i = 0; i < DNS_TABLE_SIZE; ++i) {
     if (dns_table[i].state != DNS_STATE_UNUSED) {
-      tmr_restart = true;
+      tmr_restart = 1;
       break;
     }
   }
@@ -471,7 +467,7 @@ dns_tmr(void)
     sys_timeout(DNS_TMR_INTERVAL, dns_timeout_cb, NULL);
   } else {
     sys_untimeout(dns_timeout_cb, NULL);
-    s_is_tmr_start = false;
+    s_is_tmr_start = 0;
   }
 #endif/* ESP_LWIP_DNS_TIMERS_ONDEMAND */
 }
@@ -1639,7 +1635,7 @@ dns_enqueue(const char *name, size_t hostnamelen, dns_found_callback found,
 #if ESP_LWIP_DNS_TIMERS_ONDEMAND
   if (!s_is_tmr_start) {
     sys_timeout(DNS_TMR_INTERVAL, dns_timeout_cb, NULL);
-    s_is_tmr_start = true;
+    s_is_tmr_start = 1;
   }
 #endif /* ESP_LWIP_DNS_TIMERS_ONDEMAND */
 
@@ -1675,15 +1671,15 @@ dns_gethostbyname(const char *hostname, ip_addr_t *addr, dns_found_callback foun
 }
 
 #if ESP_DNS
-static bool dns_server_is_set (void)
+static u8_t dns_server_is_set (void)
 {
   int i = 0;
   for (i = 0;i < DNS_MAX_SERVERS; i++) {
     if (!ip_addr_isany_val(dns_servers[i])) {
-      return true;
+      return 1;
     }
   }
-  return false;
+  return 0;
 }
 #endif
 
@@ -1811,7 +1807,7 @@ dns_gethostbyname_addrtype_n(const char *hostname, ip_addr_t *addr, u8_t addr_cn
   {
     /* prevent calling found callback if no server is set, return error instead */
 #if ESP_DNS
-    if (dns_server_is_set() == false) {
+    if (dns_server_is_set() == 0) {
 #else
     if (ip_addr_isany_val(dns_servers[0])) {
 #endif

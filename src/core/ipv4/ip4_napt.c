@@ -42,7 +42,6 @@
 #if ESP_LWIP && LWIP_IPV4 && IP_NAPT
 
 #include <assert.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "lwip/sys.h"
@@ -108,7 +107,7 @@ static struct ip_napt_entry *ip_napt_table = NULL;
 static struct ip_portmap_entry *ip_portmap_table = NULL;
 #endif
 
-static void ip_napt_gc(uint32_t now, bool force);
+static void ip_napt_gc(uint32_t now, u8_t force);
 static void ip_napt_tmr(void *arg);
 
 #define WRAPPED_AROUND(a, b) ((((a) ^ (b)) & (1UL << 31)) != 0)
@@ -580,7 +579,7 @@ ip_napt_add(u8_t proto, u32_t src, u16_t sport, u32_t dest, u16_t dport, u32_t s
   }
   t = NT(napt_free);
   if (!t) {
-    ip_napt_gc(sys_now(), true /* make_room */);
+    ip_napt_gc(sys_now(), 1 /* make_room */);
     t = NT(napt_free);
   }
   if (t) {
@@ -980,7 +979,7 @@ ip_napt_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp, struct 
 }
 
 static void
-ip_napt_gc(uint32_t now, bool force)
+ip_napt_gc(uint32_t now, u8_t force)
 {
   u16_t i, next, oldest = NO_IDX;
   u32_t age = 0, oldest_age = 0;
@@ -1056,7 +1055,7 @@ ip_napt_maint(void)
       t->last = now;
     }
   }
-  ip_napt_gc(now, false /* make_room */);
+  ip_napt_gc(now, 0 /* make_room */);
   s_last_now = now;
 }
 

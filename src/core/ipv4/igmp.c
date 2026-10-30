@@ -23,7 +23,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY CITEL TECHNOLOGIES AND CONTRIBUTORS ``AS IS''
+ * THIS SOFTWARE IS PROVIDED BY CITEL TECHNOLOGIES AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL CITEL TECHNOLOGIES OR CONTRIBUTORS BE LIABLE
@@ -109,8 +109,7 @@ static ip4_addr_t     allsystems;
 static ip4_addr_t     allrouters;
 
 #if ESP_LWIP_IGMP_TIMERS_ONDEMAND
-#include <stdbool.h>
-static bool is_tmr_start = false;
+static u8_t is_tmr_start = 0;
 #endif
 
 /**
@@ -659,7 +658,7 @@ igmp_tmr(void)
 {
   struct netif *netif;
 #if ESP_LWIP_IGMP_TIMERS_ONDEMAND
-  bool tmr_restart = false;
+  u8_t tmr_restart = 0;
 #endif
 
   NETIF_FOREACH(netif) {
@@ -673,7 +672,7 @@ igmp_tmr(void)
         }
 #if ESP_LWIP_IGMP_TIMERS_ONDEMAND
         else {
-          tmr_restart = true;
+          tmr_restart = 1;
         }
 #endif
       }
@@ -685,7 +684,7 @@ igmp_tmr(void)
     sys_timeout(IGMP_TMR_INTERVAL, igmp_timeout_cb, NULL);
   } else {
     sys_untimeout(igmp_timeout_cb, NULL);
-    is_tmr_start = false;
+    is_tmr_start = 0;
   }
 #endif
 }
@@ -737,7 +736,7 @@ igmp_start_timer(struct igmp_group *group, u8_t max_time)
 #if ESP_LWIP_IGMP_TIMERS_ONDEMAND
   if (!is_tmr_start) {
     sys_timeout(IGMP_TMR_INTERVAL, igmp_timeout_cb, NULL);
-    is_tmr_start = true;
+    is_tmr_start = 1;
   }
 #endif
 }

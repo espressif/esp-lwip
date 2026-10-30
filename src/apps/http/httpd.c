@@ -18,7 +18,7 @@
  * 3. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
  * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
@@ -2252,7 +2252,7 @@ http_find_file(struct http_state *hs, const char *uri, int is_09)
   if (file == NULL) {
     /* No - we've been asked for a specific file. */
     /* First, isolate the base URI (without any parameters) */
-    params = (char *)strchr(uri, '?');
+    params = LWIP_CONST_CAST(char *, strchr(uri, '?'));
     if (params != NULL) {
       /* URI contains parameters. NULL-terminate the base URI */
       *params = '\0';
