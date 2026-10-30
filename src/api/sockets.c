@@ -2815,10 +2815,13 @@ lwip_getaddrname(int s, struct sockaddr *name, socklen_t *namelen, u8_t local)
   ip_addr_debug_print_val(SOCKETS_DEBUG, naddr);
   LWIP_DEBUGF(SOCKETS_DEBUG, (" port=%"U16_F")\n", port));
 
-  if (*namelen > IPADDR_SOCKADDR_GET_LEN(&saddr)) {
-    *namelen = IPADDR_SOCKADDR_GET_LEN(&saddr);
-  }
-  MEMCPY(name, &saddr, *namelen);
+  /* Copy at most *namelen bytes into the caller's buffer, but always
+   * report the actual address length back via *namelen, even if the
+   * caller's buffer was too small to hold the whole address - this
+   * matches the POSIX getsockname()/getpeername() contract and lets
+   * the caller detect truncation. */
+  MEMCPY(name, &saddr, LWIP_MIN(*namelen, IPADDR_SOCKADDR_GET_LEN(&saddr)));
+  *namelen = IPADDR_SOCKADDR_GET_LEN(&saddr);
 
   set_errno(0);
   done_socket(sock);
