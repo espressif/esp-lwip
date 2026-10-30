@@ -628,7 +628,6 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
   if (conn->flags & NETCONN_FLAG_MBOXINVALID) {
     if (lwip_netconn_is_deallocated_msg(buf)) {
       /* the netconn has been closed from another thread */
-      API_MSG_VAR_FREE_ACCEPT(msg);
       return ERR_CONN;
     }
   }

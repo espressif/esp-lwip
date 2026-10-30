@@ -843,9 +843,26 @@ lwip_close(int s)
 #endif /* LWIP_IPV6_MLD */
 
   err = netconn_prepare_delete(sock->conn);
+  /* Retry on transient errors so prepare_delete can succeed and we avoid leaking
+   * recvmbox (~108 B), TCP PCB (~208 B), netconn. When FULLDUPLEX is off we otherwise
+   * never retry and close() leaks on first failure. */
+  {
+    const int close_retries = 100;
+    const int close_retry_delay_ms = 50;
+    int retries = 0;
+    while (err != ERR_OK && retries < close_retries) {
+      /* Retry for all errors: ERR_INPROGRESS (blocking op), ERR_MEM (transient),
+       * or other (e.g. ERR_VAL) so tcpip task has time to run delconn and we avoid
+       * leaking PCB (~208 B), netconn, recv mbox (~108 B). */
+      sys_delay_ms(close_retry_delay_ms);
+      err = netconn_prepare_delete(sock->conn);
+      retries++;
+    }
+  }
   if (err != ERR_OK) {
     set_errno(err_to_errno(err));
-    done_socket(sock);
+    /* Still free socket/netconn/mbox to avoid leak; TCP PCB may remain until tcpip task runs. */
+    free_socket(sock, is_tcp);
     return -1;
   }
 
