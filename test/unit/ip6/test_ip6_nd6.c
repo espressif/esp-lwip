@@ -270,10 +270,70 @@ START_TEST(test_ip6_nd6_ra_rio) {
 }
 END_TEST
 
+/* Routers advertising the same prefix share one route_list entry, which names
+ * only the latest of them. The ones it replaced must be released once they
+ * expire, or they fill default_router_list and later RAs are dropped. */
+START_TEST(test_ip6_nd6_ra_rio_shared_prefix) {
+  struct pbuf *ra_rio_pbuf = NULL;
+  err_t err = ERR_OK;
+  const u8_t *hwaddr = NULL;
+  struct netif *found_route = NULL;
+  ip6_addr_t router_addr, host_addr, dst_addr, rio_prefix, multicast_addr;
+  u8_t router_mac[6] = {2, 0, 0, 0, 0, 0};
+  s8_t chosen_idx = -1;
+  u32_t i;
+
+  netif_add(&host_netif, NULL, NULL, NULL, NULL, testif_init_host,
+            ethernet_input);
+  ip6addr_aton("fe80::ab00:beef:cafe:3", &host_addr);
+  netif_add_ip6_address(&host_netif, &host_addr, &chosen_idx);
+  fail_unless(chosen_idx != -1);
+  host_netif.ip6_addr_state[chosen_idx] = IP6_ADDR_VALID;
+  netif_set_up(&host_netif);
+
+  ip6addr_aton("ff02::1", &multicast_addr);
+  ip6addr_aton("fdde:ad00:abcd:beef:cafe::", &rio_prefix);
+  ip6addr_aton("fdde:ad00:abcd:beef:cafe::1", &dst_addr);
+  ip6addr_aton("fe80::aa00:0", &router_addr);
+
+  /* More routers than default_router_list can hold, one after another */
+  for (i = 1; i <= LWIP_ND6_NUM_ROUTERS + 2; i++) {
+    router_addr.addr[3] = lwip_htonl(i);
+    router_mac[5] = (u8_t)i;
+
+    ra_rio_pbuf = create_nd6_rio_test_packet(&multicast_addr, &router_addr,
+                                             &rio_prefix, 64, 1800, router_mac);
+    fail_unless(ra_rio_pbuf != NULL);
+    send_to_netif(&host_netif, ra_rio_pbuf);
+
+    /* The RA carries a router lifetime of 0, so the replaced router expires */
+    nd6_handle_timer(1);
+
+    /* The route must follow the latest router */
+    found_route = nd6_find_route(&dst_addr);
+    fail_unless(found_route == &host_netif);
+    err = nd6_get_next_hop_addr_or_queue(found_route, NULL, &dst_addr, &hwaddr);
+    fail_unless(err == ERR_OK);
+    fail_unless(hwaddr != NULL);
+    fail_unless(memcmp(router_mac, hwaddr, 6) == 0);
+  }
+
+  /* The route goes away by itself once no router refreshes it */
+  nd6_handle_timer(1800);
+  found_route = nd6_find_route(&dst_addr);
+  fail_unless(found_route == NULL);
+
+  /* cleanup */
+  netif_set_down(&host_netif);
+  netif_remove(&host_netif);
+}
+END_TEST
+
 /** Create the suite including all tests for this module */
 Suite *ip6_nd6_suite(void) {
   testfunc tests[] = {
       TESTFUNC(test_ip6_nd6_ra_rio),
+      TESTFUNC(test_ip6_nd6_ra_rio_shared_prefix),
   };
   return create_suite("IP6_ND6", tests, sizeof(tests) / sizeof(testfunc),
                       ip6nd6_setup, ip6nd6_teardown);
