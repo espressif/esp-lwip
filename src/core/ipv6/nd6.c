@@ -144,6 +144,7 @@ static err_t nd6_queue_packet(s8_t neighbor_index, struct pbuf *q);
 static s8_t nd6_get_route(const ip6_addr_t *prefix, const u8_t prefix_len, struct netif *netif);
 static s8_t nd6_new_route(const ip6_addr_t *prefix, const u8_t prefix_len);
 static s8_t compare_prefix(const ip6_addr_t *addr1, const ip6_addr_t *addr2, u8_t prefix_len);
+static int nd6_router_owns_route(s8_t router_index);
 #endif
 
 #define ND6_SEND_FLAG_MULTICAST_DEST 0x01
@@ -1185,10 +1186,12 @@ nd6_tmr(void)
     if (default_router_list[i].neighbor_entry != NULL) {
       /* Active entry. */
       if (default_router_list[i].invalidation_timer <= ND6_TMR_INTERVAL / 1000) {
-        if (default_router_list[i].route_list_entry_index != -1) {
+#if LWIP_ND6_SUPPORT_RIO
+        if (nd6_router_owns_route(i)) {
           /* This default_route_list entry is still used by route_list */
           continue;
         }
+#endif /* LWIP_ND6_SUPPORT_RIO */
         /* No more than 1 second remaining. Clear this entry. Also clear any of
          * its destination cache entries, as per RFC 4861 Sec. 5.3 and 6.3.5. */
         for (j = 0; j < LWIP_ND6_NUM_DESTINATIONS; j++) {
@@ -2207,6 +2210,33 @@ nd6_new_route(const ip6_addr_t *prefix, const u8_t prefix_len)
 
   /* Entry not available. */
   return -1;
+}
+
+/**
+ * Check whether a default router is the one a live route currently forwards through.
+ *
+ * Routers advertising the same prefix share one route_list entry, whose
+ * router_list_entry_index names only the latest advertiser. Each router's own
+ * route_list_entry_index stays set after it is replaced, so that field cannot say
+ * whether the router is still needed: testing it would keep a departed router, and its
+ * neighbor cache entry, forever.
+ *
+ * @param router_index the index in default_router_list
+ * @return 1 if a route forwards through this router, 0 otherwise
+ */
+static int
+nd6_router_owns_route(s8_t router_index)
+{
+  s8_t i;
+
+  for (i = 0; i < LWIP_ND6_NUM_ROUTES; ++i) {
+    if (!ip6_addr_isany(&route_list[i].prefix) &&
+        route_list[i].router_list_entry_index == router_index) {
+      return 1;
+    }
+  }
+
+  return 0;
 }
 #endif /* LWIP_ND6_SUPPORT_RIO */
 
