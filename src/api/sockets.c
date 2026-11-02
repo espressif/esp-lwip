@@ -2950,6 +2950,7 @@ lwip_sockopt_to_ipopt(int optname)
   case SO_KEEPALIVE:
     return SOF_KEEPALIVE;
   case SO_REUSEADDR:
+  case SO_REUSEPORT: /* lwIP has a single reuse flag for address and port */
     return SOF_REUSEADDR;
   default:
     LWIP_ASSERT("Unknown socket option", 0);
@@ -3001,6 +3002,7 @@ lwip_getsockopt_impl(int s, int level, int optname, void *optval, socklen_t *opt
         case SO_KEEPALIVE:
 #if SO_REUSE
         case SO_REUSEADDR:
+        case SO_REUSEPORT:
 #endif /* SO_REUSE */
           if ((optname == SO_BROADCAST) &&
               (NETCONNTYPE_GROUP(sock->conn->type) != NETCONN_UDP)) {
@@ -3409,6 +3411,7 @@ lwip_setsockopt_impl(int s, int level, int optname, const void *optval, socklen_
         case SO_KEEPALIVE:
 #if SO_REUSE
         case SO_REUSEADDR:
+        case SO_REUSEPORT:
 #endif /* SO_REUSE */
           if ((optname == SO_BROADCAST) &&
               (NETCONNTYPE_GROUP(sock->conn->type) != NETCONN_UDP)) {

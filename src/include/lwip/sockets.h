@@ -216,7 +216,7 @@ struct ifreq {
 #define SO_LINGER       0x0080 /* linger on close if data present */
 #define SO_DONTLINGER   ((int)(~SO_LINGER))
 #define SO_OOBINLINE    0x0100 /* Unimplemented: leave received OOB data in line */
-#define SO_REUSEPORT    0x0200 /* Unimplemented: allow local address & port reuse */
+#define SO_REUSEPORT    0x0200 /* allow local address & port reuse, same as SO_REUSEADDR */
 #define SO_SNDBUF       0x1001 /* Unimplemented: send buffer size */
 #define SO_RCVBUF       0x1002 /* receive buffer size */
 #define SO_SNDLOWAT     0x1003 /* Unimplemented: send low-water mark */
