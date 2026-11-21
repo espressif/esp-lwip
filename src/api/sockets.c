@@ -2815,10 +2815,15 @@ lwip_getaddrname(int s, struct sockaddr *name, socklen_t *namelen, u8_t local)
   ip_addr_debug_print_val(SOCKETS_DEBUG, naddr);
   LWIP_DEBUGF(SOCKETS_DEBUG, (" port=%"U16_F")\n", port));
 
-  if (*namelen > IPADDR_SOCKADDR_GET_LEN(&saddr)) {
-    *namelen = IPADDR_SOCKADDR_GET_LEN(&saddr);
+  /* Per POSIX, *namelen must always be updated to the actual size of the
+   * address, even if the supplied buffer was too small to hold it, so the
+   * caller can detect truncation. Only the copy itself is limited to the
+   * caller-supplied buffer size. */
+  {
+    socklen_t addr_len = (socklen_t)IPADDR_SOCKADDR_GET_LEN(&saddr);
+    MEMCPY(name, &saddr, LWIP_MIN(*namelen, addr_len));
+    *namelen = addr_len;
   }
-  MEMCPY(name, &saddr, *namelen);
 
   set_errno(0);
   done_socket(sock);
