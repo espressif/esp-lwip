@@ -595,7 +595,8 @@ sntp_dns_found(const char *hostname, const ip_addr_t *ipaddr, void *arg)
   } else {
     /* DNS resolving failed -> try another server */
     LWIP_DEBUGF(SNTP_DEBUG_WARN_STATE, ("sntp_dns_found: Failed to resolve server address resolved, trying next server\n"));
-    sntp_try_next_server(NULL);
+    sys_untimeout(sntp_try_next_server, NULL);
+    sys_timeout((u32_t)SNTP_RETRY_TIMEOUT, sntp_try_next_server, NULL);
   }
 }
 #endif /* SNTP_SERVER_DNS */
