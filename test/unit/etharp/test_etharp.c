@@ -261,13 +261,58 @@ START_TEST(test_etharp_table)
 }
 END_TEST
 
+/* Pending ARP created after set_down must be discarded by netif_remove. */
+START_TEST(test_etharp_pending_cleared_on_netif_remove)
+{
+  ip4_addr_t adr;
+  err_t err;
+  struct pbuf *p;
+  int used_pbufs;
+  LWIP_UNUSED_ARG(_i);
+
+  linkoutput_ctr = 0;
+  IP4_ADDR(&adr, 192, 168, 0, 55);
+
+  err = etharp_query(&test_netif, &adr, NULL);
+  fail_unless(err == ERR_OK);
+  fail_unless(linkoutput_ctr == 1);
+
+  netif_set_down(&test_netif);
+
+  /* Recreate a pending entry while down and queue a packet on it. */
+  used_pbufs = MEMP_STATS_GET(used, MEMP_PBUF_POOL);
+  p = pbuf_alloc(PBUF_TRANSPORT, 10, PBUF_POOL);
+  fail_unless(p != NULL);
+  linkoutput_ctr = 0;
+  err = etharp_query(&test_netif, &adr, p);
+  fail_unless(err == ERR_OK);
+  fail_unless(linkoutput_ctr == 1);
+  pbuf_free(p);
+  fail_unless(MEMP_STATS_GET(used, MEMP_PBUF_POOL) == used_pbufs + 1);
+
+  linkoutput_ctr = 0;
+  netif_remove(&test_netif);
+
+  /* netif_remove must free the queued pbuf (proves ARP entry was cleared). */
+  fail_unless(MEMP_STATS_GET(used, MEMP_PBUF_POOL) == used_pbufs);
+
+  /* Bring the static netif object up again: no pending entry should remain. */
+  netif_set_up(&test_netif);
+  etharp_tmr();
+  fail_unless(linkoutput_ctr == 0);
+
+  default_netif_add();
+}
+END_TEST
+
 
 /** Create the suite including all tests for this module */
 Suite *
 etharp_suite(void)
 {
   testfunc tests[] = {
-    TESTFUNC(test_etharp_table)
+    TESTFUNC(test_etharp_table),
+    TESTFUNC(test_etharp_pending_cleared_on_netif_remove)
   };
   return create_suite("ETHARP", tests, sizeof(tests)/sizeof(testfunc), etharp_setup, etharp_teardown);
 }
