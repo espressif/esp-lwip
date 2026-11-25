@@ -811,6 +811,15 @@ netif_remove(struct netif *netif)
     /* set netif down before removing (call callback function) */
     netif_set_down(netif);
   }
+  /* Ensure no ARP/ND6 cache entries reference the removed netif. */
+#if LWIP_IPV4 && LWIP_ARP
+  if (netif->flags & NETIF_FLAG_ETHARP) {
+    etharp_cleanup_netif(netif);
+  }
+#endif /* LWIP_IPV4 && LWIP_ARP */
+#if LWIP_IPV6 && LWIP_ND6
+  nd6_cleanup_netif(netif);
+#endif /* LWIP_IPV6 && LWIP_ND6 */
 
   mib2_remove_ip4(netif);
 
